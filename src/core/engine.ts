@@ -1,8 +1,8 @@
+import type { DomainEvent, EventType, ToEventMap } from '../lib/events';
+import { ensureMeta, wrapAsCustomEvent } from '../lib/events';
 import type { Result } from '../lib/result';
-import type { DomainEvent, ToEventMap, EventType, EventMeta } from '../lib/events';
-import { createMeta } from '../lib/events';
 import type { EventStore } from './event-store';
-import type { SnapshotStore, Snapshot } from './snapshot-store';
+import type { SnapshotStore } from './snapshot-store';
 
 /**
  * Configuration for an aggregate (domain entity)
@@ -11,7 +11,7 @@ export interface AggregateConfig<
   TCommand,
   TEvent extends DomainEvent,
   TState,
-  TError
+  TError,
 > {
   /** Initial state before any events */
   initialState: TState;
@@ -20,15 +20,6 @@ export interface AggregateConfig<
   /** Pure function: (command, state) => Result<events, error> */
   decider: (command: TCommand, state: TState) => Result<TEvent[], TError>;
 }
-
-/**
- * Type inference helpers for AggregateConfig
- * These extract the type parameters from a config object
- */
-export type InferCommand<T> = T extends AggregateConfig<infer C, any, any, any> ? C : never;
-export type InferEvent<T> = T extends AggregateConfig<any, infer E, any, any> ? E : never;
-export type InferState<T> = T extends AggregateConfig<any, any, infer S, any> ? S : never;
-export type InferError<T> = T extends AggregateConfig<any, any, any, infer Err> ? Err : never;
 
 /**
  * Command with required streamId
@@ -61,29 +52,6 @@ export interface EngineOptions<TState = unknown> {
 }
 
 /**
- * Internal: Wrap a Plain Object event as CustomEvent for EventTarget compatibility
- */
-const wrapAsCustomEvent = <E extends DomainEvent>(
-  event: E
-): CustomEvent<E['data']> & { originalEvent: E } => {
-  const customEvent = new CustomEvent(event.type, {
-    detail: event.data,
-  }) as CustomEvent<E['data']> & { originalEvent: E };
-  customEvent.originalEvent = event;
-  return customEvent;
-};
-
-/**
- * Internal: Ensure event has meta, adding if missing
- */
-const ensureMeta = <E extends DomainEvent>(event: E): E & { meta: EventMeta } => {
-  if (event.meta) {
-    return event as E & { meta: EventMeta };
-  }
-  return { ...event, meta: createMeta() } as E & { meta: EventMeta };
-};
-
-/**
  * Main orchestrator for Event Sourcing
  * Extends EventTarget for reactive event dispatching (Reactor pattern)
  */
@@ -91,7 +59,7 @@ export class Engine<
   TCommand extends Command = Command,
   TEvent extends DomainEvent = DomainEvent,
   TState = unknown,
-  TError = Error
+  TError = Error,
 > extends EventTarget {
   private readonly bus?: EventPublisher;
   private readonly snapshotStore?: SnapshotStore<TState>;
@@ -121,24 +89,20 @@ export class Engine<
    * @returns Result with new events on success, or error on failure
    */
   async execute(command: TCommand): Promise<Result<TEvent[], TError>> {
-    // 1. Load Snapshot (if available)
     const snapshotData = this.snapshotStore
       ? await this.snapshotStore.load(command.streamId)
       : undefined;
     const fromVersion = snapshotData?.version ?? 0;
     const initialState = snapshotData?.state ?? this.config.initialState;
 
-    // 2. Load History (from snapshot version onwards)
     const existingEvents = await this.eventStore.readStream(
       command.streamId,
       fromVersion
     );
     const totalVersion = fromVersion + existingEvents.length;
 
-    // 3. Rehydrate State
     const state = existingEvents.reduce(this.config.reducer, initialState);
 
-    // 4. Decide
     const decision = this.config.decider(command, state);
     if (!decision.ok) {
       return decision;
@@ -146,29 +110,23 @@ export class Engine<
 
     const newEvents = decision.value;
 
-    // 5. Commit to Store
     await this.eventStore.appendToStream(
       command.streamId,
       newEvents,
       totalVersion
     );
 
-    // 6. Dispatch for Reactors
     for (const event of newEvents) {
-      // Ensure meta is present
       const eventWithMeta = ensureMeta(event);
-
-      // Wrap as CustomEvent and dispatch
       const customEvent = wrapAsCustomEvent(eventWithMeta);
       this.dispatchEvent(customEvent);
 
-      // Publish to EventBus (Plain Object)
       if (this.bus) {
         this.bus.publish(eventWithMeta);
       }
     }
 
-    // 7. Auto-snapshot if configured
+    // Auto-snapshot if configured
     if (this.snapshotStore && this.snapshotEvery) {
       const newTotalVersion = totalVersion + newEvents.length;
       const lastSnapshotVersion = snapshotData?.version ?? 0;
@@ -206,12 +164,19 @@ export class Engine<
       throw new Error('No snapshot store configured');
     }
 
-    const events = await this.eventStore.readStream(streamId);
-    const state = events.reduce(this.config.reducer, this.config.initialState);
+    // Load existing snapshot to build incrementally (performance optimization)
+    const existingSnapshot = await this.snapshotStore.load(streamId);
+    const fromVersion = existingSnapshot?.version ?? 0;
+    const baseState = existingSnapshot?.state ?? this.config.initialState;
+
+    // Only read events since the last snapshot
+    const events = await this.eventStore.readStream(streamId, fromVersion);
+    const state = events.reduce(this.config.reducer, baseState);
+    const version = fromVersion + events.length;
 
     await this.snapshotStore.save({
       streamId,
-      version: events.length,
+      version,
       state,
       timestamp: Date.now(),
     });
@@ -219,12 +184,12 @@ export class Engine<
 
   /**
    * 型安全なイベントリスナー登録
-   * 
+   *
    * @example
    * engine.on('ItemAdded', (event) => {
    *   console.log(event.data.itemId); // 型推論される
    * });
-   * 
+   *
    * @param type - イベントタイプ（リテラル型）
    * @param handler - イベントハンドラー
    * @returns unsubscribe 関数

@@ -1,5 +1,5 @@
-import type { DomainEvent, ToEventMap, EventType, EventMeta } from '../lib/events';
-import { createMeta } from '../lib/events';
+import type { DomainEvent, EventType, ToEventMap } from '../lib/events';
+import { ensureMeta, wrapAsCustomEvent } from '../lib/events';
 
 /**
  * Error handler for async reactor failures
@@ -18,44 +18,21 @@ export interface EventBusOptions<TEvent extends DomainEvent = DomainEvent> {
 }
 
 /**
- * Internal: Wrap a Plain Object event as CustomEvent for EventTarget compatibility
- */
-const wrapAsCustomEvent = <E extends DomainEvent>(
-  event: E
-): CustomEvent<E['data']> & { originalEvent: E } => {
-  const customEvent = new CustomEvent(event.type, {
-    detail: event.data,
-  }) as CustomEvent<E['data']> & { originalEvent: E };
-  customEvent.originalEvent = event;
-  return customEvent;
-};
-
-/**
- * Internal: Ensure event has meta, adding if missing
- */
-const ensureMeta = <E extends DomainEvent>(event: E): E & { meta: EventMeta } => {
-  if (event.meta) {
-    return event as E & { meta: EventMeta };
-  }
-  return { ...event, meta: createMeta() } as E & { meta: EventMeta };
-};
-
-/**
  * Central event bus for multiple Engine instances
- * 
+ *
  * @example
  * const bus = new EventBus<OrderEvent | InventoryEvent>();
- * 
+ *
  * // Subscribe to events
  * bus.on('OrderPlaced', async (event) => {
  *   console.log(event.data.orderId);
  * });
- * 
+ *
  * // Publish events (usually done by Engine)
  * bus.publish({ type: 'OrderPlaced', data: { orderId: 'order-1', productId: 'apple', quantity: 5 } });
  */
 export class EventBus<
-  TEvent extends DomainEvent = DomainEvent
+  TEvent extends DomainEvent = DomainEvent,
 > extends EventTarget {
   private globalErrorHandler?: ReactorErrorHandler<TEvent>;
 
@@ -78,7 +55,7 @@ export class EventBus<
 
   /**
    * Type-safe event subscription with async support
-   * 
+   *
    * @param type - Event type (literal type)
    * @param handler - Event handler (can be async)
    * @param options - Optional error handler for this specific subscription
@@ -96,17 +73,17 @@ export class EventBus<
         type: e.type,
         data: (e as CustomEvent).detail,
       }) as ToEventMap<TEvent>[K];
-      
-      // Handle both sync and async handlers
-      const maybePromise = handler(event);
-      
-      if (maybePromise instanceof Promise) {
-        maybePromise.catch((error) => {
+
+      // Handle both sync and async handlers with try-catch for sync exceptions
+      try {
+        Promise.resolve(handler(event)).catch((error) => {
           this.handleError(error, event, options?.onError);
         });
+      } catch (error) {
+        this.handleError(error, event, options?.onError);
       }
     };
-    
+
     this.addEventListener(type, listener);
     return () => this.removeEventListener(type, listener);
   }
@@ -127,15 +104,13 @@ export class EventBus<
     if (localHandler) {
       localHandler(error, event);
     }
-    
+
     // Then global handler
     if (this.globalErrorHandler) {
       this.globalErrorHandler(error, event as unknown as TEvent);
     }
-    
+
     // Dispatch error event for additional listeners
-    this.dispatchEvent(
-      new CustomEvent('error', { detail: { error, event } })
-    );
+    this.dispatchEvent(new CustomEvent('error', { detail: { error, event } }));
   }
 }
