@@ -29,9 +29,11 @@ export { type DomainError, defineError, isDomainError } from './lib/errors';
 export {
   createMeta,
   type DomainEvent,
+  defaultIdGenerator,
   defineEvent,
   type EventMeta,
   type EventType,
+  type IdGenerator,
   type ToEventMap,
 } from './lib/events';
 export { defineProjection } from './lib/projections';

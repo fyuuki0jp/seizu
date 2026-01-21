@@ -18,7 +18,7 @@
     "minify": {
       "description": "Specialized in cleaning up code: removing unused imports, dead code, redundant comments, and simplifying overly complex logic",
       "mode": "subagent",
-      "model": "github-copilot/claude-opus-4.5",
+      "model": "github-copilot/claude-sonnet-4.5",
       "prompt": "{file:./prompts/minify.md}",
       "tools": {
         "write": true,
@@ -32,7 +32,7 @@
     "build": {
       "description": "Specialized in building and implementing features",
       "mode": "subagent",
-      "model": "github-copilot/claude-opus-4.5",
+      "model": "github-copilot/gpt-5.2-codex",
       "prompt": "{file:./prompts/build.md}",
       "tools": {
         "write": true,
@@ -60,7 +60,7 @@
     "explore": {
       "description": "Specialized in researching internal codebase: file structure, existing implementations, and current patterns",
       "mode": "subagent",
-      "model": "github-copilot/gemini-3-flash-preview",
+      "model": "github-copilot/grok-code-fast-1",
       "prompt": "{file:./prompts/explore.md}",
       "tools": {
         "write": false,
@@ -102,7 +102,7 @@
     "main": {
       "description": "Main agent coordinating subagents and managing overall workflow",
       "mode": "primary",
-      "model": "github-copilot/claude-opus-4.5",
+      "model": "github-copilot/claude-sonnet-4.5",
       "prompt": "{file:./prompts/main.md}",
       "tools": {
         "write": false,
@@ -116,7 +116,7 @@
     "code-reviewer": {
       "description": "Reviews code for best practices and potential issues",
       "mode": "subagent",
-      "model": "github-copilot/gpt-5.2-codex",
+      "model": "github-copilot/claude-opus-4.5",
       "prompt": "{file:./prompts/code-reviewer.md}",
       "tools": {
         "write": false,

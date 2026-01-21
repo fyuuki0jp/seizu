@@ -17,6 +17,7 @@ import {
   defineProjection,
   Engine,
   EventBus,
+  err,
   InMemoryEventStore,
   InMemoryProjectionStore,
   ok,
@@ -106,9 +107,15 @@ const decider = (
     case 'PlaceOrder':
       return ok([orderPlaced(command.orderId, command.amount)]);
     case 'ConfirmOrder':
-      return ok([orderConfirmed(state.orderId!)]);
+      if (!state.orderId) {
+        return err(new Error('Order not found: orderId is null'));
+      }
+      return ok([orderConfirmed(state.orderId)]);
     case 'CancelOrder':
-      return ok([orderCancelled(state.orderId!)]);
+      if (!state.orderId) {
+        return err(new Error('Order not found: orderId is null'));
+      }
+      return ok([orderCancelled(state.orderId)]);
   }
 };
 

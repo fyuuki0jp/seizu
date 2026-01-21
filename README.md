@@ -483,6 +483,15 @@ pnpm tsx examples/cart/main.ts
 
 See [examples/cart](./examples/cart) for details.
 
+### Clean Architecture Pattern
+Example showing how to structure RISE with Clean Architecture (Domain / Use Cases / Infrastructure layers).
+
+```bash
+pnpm tsx examples/clean-arch/main.ts
+```
+
+See [examples/clean-arch](./examples/clean-arch) for details.
+
 ### Order Flow (EventBus Pattern)
 Multi-aggregate example showing event cascades: Order → Inventory → PurchaseOrder.
 

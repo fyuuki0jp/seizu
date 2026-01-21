@@ -1,4 +1,9 @@
-import type { DomainEvent, EventType, ToEventMap } from '../lib/events';
+import type {
+  DomainEvent,
+  EventType,
+  IdGenerator,
+  ToEventMap,
+} from '../lib/events';
 import { ensureMeta, wrapAsCustomEvent } from '../lib/events';
 import type { Result } from '../lib/result';
 import type { EventStore } from './event-store';
@@ -34,7 +39,7 @@ export interface Command {
  * This allows Engine to work with any EventBus regardless of its type parameter.
  */
 export interface EventPublisher {
-  publish(event: DomainEvent): void;
+  publish(event: DomainEvent): void | Promise<void>;
 }
 
 /**
@@ -49,6 +54,10 @@ export interface EngineOptions<TState = unknown> {
   snapshotStore?: SnapshotStore<TState>;
   /** Automatically save snapshot every N events (opt-in) */
   snapshotEvery?: number;
+  /** Custom ID generator for event metadata */
+  idGenerator?: IdGenerator;
+  /** Hook for async publish errors */
+  onPublishError?: (error: unknown, event: DomainEvent) => void;
 }
 
 /**
@@ -64,6 +73,11 @@ export class Engine<
   private readonly bus?: EventPublisher;
   private readonly snapshotStore?: SnapshotStore<TState>;
   private readonly snapshotEvery?: number;
+  private readonly idGenerator?: IdGenerator;
+  private readonly onPublishError?: (
+    error: unknown,
+    event: DomainEvent
+  ) => void;
 
   constructor(
     private readonly eventStore: EventStore<TEvent>,
@@ -74,6 +88,8 @@ export class Engine<
     this.bus = options?.bus;
     this.snapshotStore = options?.snapshotStore;
     this.snapshotEvery = options?.snapshotEvery;
+    this.idGenerator = options?.idGenerator;
+    this.onPublishError = options?.onPublishError;
   }
 
   /**
@@ -109,20 +125,27 @@ export class Engine<
     }
 
     const newEvents = decision.value;
+    const eventsWithMeta = newEvents.map((event) =>
+      ensureMeta(event, this.idGenerator)
+    );
 
     await this.eventStore.appendToStream(
       command.streamId,
-      newEvents,
+      eventsWithMeta,
       totalVersion
     );
 
-    for (const event of newEvents) {
-      const eventWithMeta = ensureMeta(event);
+    for (const eventWithMeta of eventsWithMeta) {
       const customEvent = wrapAsCustomEvent(eventWithMeta);
       this.dispatchEvent(customEvent);
 
       if (this.bus) {
-        this.bus.publish(eventWithMeta);
+        const result = this.bus.publish(eventWithMeta);
+        if (result instanceof Promise) {
+          result.catch((error) => {
+            this.onPublishError?.(error, eventWithMeta);
+          });
+        }
       }
     }
 
@@ -137,7 +160,7 @@ export class Engine<
       }
     }
 
-    return decision;
+    return { ok: true, value: eventsWithMeta };
   }
 
   /**
