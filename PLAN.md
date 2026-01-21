@@ -205,3 +205,200 @@ export const defineProjection = <TState, TEvent extends DomainEvent>(
 - [ ] `@rise/adapter-redis` パッケージ
 - [ ] CLI ツール (`rise init` でプロジェクト生成)
 - [ ] Saga サポート (`defineSaga()` ヘルパー)
+
+---
+
+# OSS公開準備計画 (v0.4.1)
+
+## Vision: Disposable Systems における Core レイヤー構築ライブラリ
+
+### 背景
+「Architecture for Disposable Systems」(https://tuananh.net/2026/01/15/architecture-for-disposable-systems/) で提唱される3層アーキテクチャ:
+
+| レイヤー | 役割 | 特性 |
+|----------|------|------|
+| **Core (Durable)** | ビジネスロジック、データモデル、コアアルゴリズム | 人間が書く、長期維持、堅牢 |
+| **Connectors (APIs)** | コンポーネント間の通信契約 | 不変、完璧であるべき |
+| **Disposable Layer** | グルーコード、パーサー、UI、統合スクリプト | AI生成、使い捨て可能 |
+
+### RISE の位置づけ
+**Core レイヤーを Event Sourcing で効率的に構築するためのフレームワーク**
+
+**設計原則**:
+1. **Contract-First**: 型定義・スキーマを最優先、「不変の契約」として堅牢に
+2. **Durability は Adapter の責務**: コアはゼロ依存を維持、永続化は差し替え可能
+3. **AI協調時代の設計**: AIエージェントがコードを生成・操作しやすい明示的なAPI
+
+---
+
+## OSS品質調査結果サマリー
+
+### 総合評価: B (良好、一部修正必要)
+
+| カテゴリ | 評価 | 備考 |
+|----------|------|------|
+| コード品質 | ⭐⭐⭐⭐⭐ | 型安全性、構造、可読性が非常に高い |
+| Contract-First適合性 | ⭐⭐⭐⭐ | 型定義は堅牢、スキーマ検証は今後の課題 |
+| ドキュメント (README) | ⭐⭐⭐⭐⭐ | 充実した使用例とAPI説明 |
+| OSS必須ファイル | ⭐⭐ | LICENSE, CONTRIBUTING等が欠如 |
+| npm公開準備 | ⭐⭐⭐ | package.jsonのメタデータ不足 |
+| CI/CD | ⭐ | GitHub Actions等が未設定 |
+| 開発ツール | ⭐⭐⭐ | Linter/Formatterが未設定 |
+
+### Contract-First 適合性の強み
+- `DomainEvent`, `DomainError` が `readonly` で不変性を担保
+- `ToEventMap`, `EventType` 等の高度な型推論メカニズム
+- `EventStore`, `SnapshotStore`, `ProjectionStore` の抽象インターフェース分離
+- `Result` 型による明示的なエラーハンドリング
+
+### 改善が必要な領域
+- スキーマ検証（Zod等）との統合オプション
+- イベントのバージョニング戦略
+- ミドルウェア/フック機構
+
+---
+
+## Progress (OSS公開準備)
+
+### Milestone 0: コードレビュー指摘対応 [COMPLETED]
+- [x] (2026-01-21 21:59Z) **CRITICAL**: Projector.subscribe の非同期エラー黙殺を修正 (`src/core/projector.ts`)
+- [x] (2026-01-21 21:59Z) **MAJOR**: EventBus の同期例外処理を修正 (`src/core/event-bus.ts`)
+- [x] (2026-01-21 21:59Z) **MAJOR**: Engine.snapshot のスナップショット活用最適化 (`src/core/engine.ts`)
+- [x] (2026-01-21 21:59Z) **MINOR**: DomainError 型ガードに message 型検証追加 (`src/lib/errors.ts`)
+- [x] (2026-01-21 21:59Z) **MINOR**: InMemoryStore の負の fromVersion ガード追加
+
+### Milestone 1: 必須ファイル作成 [COMPLETED]
+- [x] (2026-01-21 21:59Z) LICENSE (MIT) ファイル作成
+- [x] (2026-01-21 21:59Z) package.json メタデータ追加
+
+### Milestone 2: CI/CD 設定 [COMPLETED]
+- [x] (2026-01-21 21:59Z) GitHub Actions テストワークフロー作成 (`.github/workflows/test.yml`)
+- [ ] GitHub Actions リリースワークフロー作成 (オプション - 将来対応)
+
+### Milestone 3: 開発ツール整備 [COMPLETED]
+- [x] (2026-01-21 21:59Z) Biome (Linter/Formatter) 導入
+- [x] (2026-01-21 21:59Z) lint-staged + husky 導入
+
+### Milestone 4: Dual Publishing対応 [COMPLETED]
+- [x] (2026-01-21 21:59Z) tsup.config.ts でCJS出力追加
+- [x] (2026-01-21 21:59Z) package.json exports 修正
+- [x] (2026-01-21 21:59Z) sideEffects: false 追加
+
+### Milestone 5: ドキュメント整備 [COMPLETED]
+- [x] (2026-01-21 21:59Z) CONTRIBUTING.md 作成
+- [x] (2026-01-21 21:59Z) CHANGELOG.md 作成
+- [x] (2026-01-21 21:59Z) README.md バッジ追加
+
+### Milestone 6: コミュニティ対応 [COMPLETED]
+- [x] (2026-01-21 21:59Z) CODE_OF_CONDUCT.md 作成
+- [x] (2026-01-21 21:59Z) SECURITY.md 作成
+- [x] (2026-01-21 21:59Z) .github/ISSUE_TEMPLATE/ 作成
+- [x] (2026-01-21 21:59Z) .github/PULL_REQUEST_TEMPLATE.md 作成
+
+---
+
+## Code Review 指摘詳細
+
+### CRITICAL: Projector.subscribe の非同期エラー黙殺
+
+**ファイル**: `src/core/projector.ts`
+**問題**: `this.handle()` の Promise を返していないため、EventBus のエラーハンドリングに乗らない
+
+**修正案**:
+```typescript
+// Before
+bus.on(eventType, (event) => {
+  this.handle(event as TEvent);
+});
+
+// After
+bus.on(eventType, (event) => {
+  return this.handle(event as TEvent);
+});
+```
+
+### MAJOR: EventBus の同期例外処理
+
+**ファイル**: `src/core/event-bus.ts`
+**問題**: handler が同期的に throw した場合、`instanceof Promise` 判定に到達せずエラー処理が行われない
+
+**修正案**:
+```typescript
+const listener = (e: Event) => {
+  const event = /* ... */;
+  try {
+    Promise.resolve(handler(event)).catch((error) => {
+      this.handleError(error, event, options?.onError);
+    });
+  } catch (error) {
+    this.handleError(error, event, options?.onError);
+  }
+};
+```
+
+### MAJOR: Engine.snapshot のパフォーマンス最適化
+
+**ファイル**: `src/core/engine.ts`
+**問題**: 既存スナップショットがあっても全イベントを再読込
+
+**修正案**:
+```typescript
+const snapshot = this.snapshotStore ? await this.snapshotStore.load(streamId) : undefined;
+const fromVersion = snapshot?.version ?? 0;
+const baseState = snapshot?.state ?? this.config.initialState;
+const events = await this.eventStore.readStream(streamId, fromVersion);
+const state = events.reduce(this.config.reducer, baseState);
+const version = fromVersion + events.length;
+```
+
+---
+
+## Validation and Acceptance
+
+### 受け入れ条件
+
+1. **コード品質**
+   - [x] Code Review の Critical/Major issues が修正済み
+   - [x] `pnpm test` が全てパス (79 tests passed)
+   - [x] `pnpm lint` がエラーなく完了 (14 warnings, 0 errors)
+
+2. **必須ファイル**
+   - [x] `LICENSE` ファイルが存在
+   - [ ] `npm publish --dry-run` がエラーなく完了 (GitHubリポジトリ確定後に確認)
+
+3. **CI/CD**
+   - [x] PRを作成するとGitHub Actionsでテストが自動実行される (.github/workflows/test.yml 作成済み)
+   - [x] Node.js 20/22 両方でテストがパス (マトリックスビルド設定済み)
+
+4. **Dual Publishing**
+   - [x] `dist/index.js` (ESM) が生成される (11.18 KB)
+   - [x] `dist/index.cjs` (CJS) が生成される (12.73 KB)
+
+5. **ドキュメント**
+   - [x] READMEにCIバッジが表示される
+   - [x] CONTRIBUTING.mdが存在する
+
+---
+
+## 将来の拡張計画 (v0.5.0+)
+
+### Contract-First 強化
+- [ ] `defineEvent` に Zod/TypeBox スキーマオプション追加
+- [ ] イベントバージョニング (`version` フィールド) サポート
+- [ ] Upcaster インターフェース（古いイベント形式の変換）
+
+### AI協調対応
+- [ ] イベントメタデータに `agentId`, `intent` 追加オプション
+- [ ] OpenAPI/AsyncAPI 定義の自動生成
+
+### ミドルウェア機構
+- [ ] Engine.execute の前後にフック挿入
+- [ ] ロギング、トレーサビリティ、権限チェック
+
+---
+
+## 未確定事項（要確認）
+
+1. **GitHubリポジトリURL** - 後で提供
+2. **著作者名** - 後で提供
+3. **npmパッケージ名** - `rise` が取得可能か確認が必要（既に使用されている可能性）

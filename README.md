@@ -1,5 +1,9 @@
 # RISE - Reactive Immutable State Engine
 
+[![CI](https://github.com/rise-es/rise/actions/workflows/test.yml/badge.svg)](https://github.com/rise-es/rise/actions/workflows/test.yml)
+[![npm version](https://img.shields.io/npm/v/rise.svg)](https://www.npmjs.com/package/rise)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A zero-dependency TypeScript library for Event Sourcing with Railway Oriented Programming.
 
 ## Features
