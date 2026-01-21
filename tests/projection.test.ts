@@ -15,6 +15,7 @@ type ItemAdded = DomainEvent<
   'ItemAdded',
   { orderId: string; itemId: string; qty: number }
 >;
+type TestEvent = DomainEvent<'TestEvent', { id: string }>;
 
 type OrderEvent = OrderPlaced | OrderCancelled | ItemAdded;
 
@@ -418,5 +419,45 @@ describe('Projector', () => {
 
       unsubscribe();
     });
+  });
+});
+
+describe('Projector error handling', () => {
+  test('handle error is propagated through EventBus onError', async () => {
+    const bus = new EventBus<TestEvent>();
+    const errors: unknown[] = [];
+
+    const failingProjection = defineProjection<{ count: number }, TestEvent>(
+      'failing',
+      () => ({ count: 0 }),
+      (_state, _event) => {
+        throw new Error('Projection failed');
+      }
+    );
+
+    const store = new InMemoryProjectionStore<{ count: number }>();
+    const projector = new Projector(
+      failingProjection,
+      store,
+      (event) => (event.data as { id: string }).id
+    );
+
+    const testEvent: TestEvent = {
+      type: 'TestEvent',
+      data: { id: 'test-1' },
+      meta: createMeta(),
+    };
+
+    bus.on('TestEvent', (event) => projector.handle(event), {
+      onError: (error) => errors.push(error),
+    });
+
+    bus.publish(testEvent);
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toBeInstanceOf(Error);
+    expect((errors[0] as Error).message).toBe('Projection failed');
   });
 });

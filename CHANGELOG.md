@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-01-21
+
+### Added
+- **ID Generator DI**: Custom ID generator can be injected via `EngineOptions.idGenerator`
+  - Enables fixed IDs for testing (environment-independent)
+  - Exports `IdGenerator` type and `defaultIdGenerator` function
+- **Async EventPublisher Support**: `EventPublisher.publish` can now return `Promise<void>`
+  - Added `onPublishError` callback in `EngineOptions` for handling async publish errors
+  - Enables future integration with external services (AWS EventBridge, etc.)
+- **Clean Architecture Example**: New `examples/clean-arch/` demonstrating Domain/Use Case/Infrastructure layering
+  - Shows how to structure RISE with Clean Architecture patterns
+  - Includes README with architectural explanations
+
+### Fixed
+- Removed non-null assertions from `examples/projection-demo.ts` for safer code
+- Added error handling test for Projector in `tests/projection.test.ts`
+
+### Changed
+- `createMeta()` now accepts optional `idGenerator` parameter (backward compatible)
+- `ensureMeta()` now accepts optional `idGenerator` parameter
+- EventPublisher interface updated to support both sync and async implementations
+
+### Documentation
+- README.md updated with Clean Architecture example link
+- Clean Architecture sample includes detailed README
+
+### Removed
+- TODO.md (all items completed)
+
 ## [0.4.1] - 2026-01-21
 
 ### Added

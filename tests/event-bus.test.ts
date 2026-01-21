@@ -1,6 +1,7 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, expectTypeOf, test } from 'vitest';
 import type { DomainEvent } from '../src';
 import { createMeta, EventBus } from '../src';
+import type { EventPublisher } from '../src/core/engine';
 
 // Test events using Plain Object style
 type TestEvent = DomainEvent<'TestEvent', { value: number }>;
@@ -150,5 +151,25 @@ describe('EventBus', () => {
     bus.publish({ type: 'TestEvent', data: { value: 99 } });
 
     expect(received).toEqual([99]);
+  });
+});
+
+describe('EventPublisher interface', () => {
+  test('sync publish implementation satisfies interface', () => {
+    const syncPublisher: EventPublisher = {
+      publish: (_event) => {
+        /* sync */
+      },
+    };
+    expectTypeOf(syncPublisher).toMatchTypeOf<EventPublisher>();
+  });
+
+  test('async publish implementation satisfies interface', () => {
+    const asyncPublisher: EventPublisher = {
+      publish: async (_event) => {
+        await Promise.resolve();
+      },
+    };
+    expectTypeOf(asyncPublisher).toMatchTypeOf<EventPublisher>();
   });
 });

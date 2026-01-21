@@ -1,4 +1,15 @@
 /**
+ * ID generator function type
+ * Used to generate unique IDs for events and metadata
+ */
+export type IdGenerator = () => string;
+
+/**
+ * Default ID generator using crypto.randomUUID()
+ */
+export const defaultIdGenerator: IdGenerator = () => crypto.randomUUID();
+
+/**
  * Metadata attached to every domain event
  */
 export interface EventMeta {
@@ -41,9 +52,15 @@ export type EventType<E extends DomainEvent> = E['type'];
 
 /**
  * Create event metadata with defaults
+ *
+ * @param partial - Partial metadata to merge with defaults
+ * @param idGenerator - Optional custom ID generator (defaults to crypto.randomUUID)
  */
-export const createMeta = (partial?: Partial<EventMeta>): EventMeta => ({
-  id: partial?.id ?? crypto.randomUUID(),
+export const createMeta = (
+  partial?: Partial<EventMeta>,
+  idGenerator: IdGenerator = defaultIdGenerator
+): EventMeta => ({
+  id: partial?.id ?? idGenerator(),
   timestamp: partial?.timestamp ?? new Date(),
   ...partial,
 });
@@ -59,13 +76,19 @@ export const wrapAsCustomEvent = <E extends DomainEvent>(
   return ce;
 };
 
-/** Ensure event has meta, adding if missing */
+/**
+ * Ensure event has meta, adding if missing
+ *
+ * @param event - Domain event
+ * @param idGenerator - Optional custom ID generator
+ */
 export const ensureMeta = <E extends DomainEvent>(
-  event: E
+  event: E,
+  idGenerator?: IdGenerator
 ): E & { meta: EventMeta } =>
   event.meta
     ? (event as E & { meta: EventMeta })
-    : { ...event, meta: createMeta() };
+    : { ...event, meta: createMeta(undefined, idGenerator) };
 
 /**
  * Helper to create a typed event factory

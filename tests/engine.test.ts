@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, test } from 'vitest';
-import { type AggregateConfig, type Command, Engine } from '../src/core/engine';
+import {
+  type AggregateConfig,
+  type Command,
+  Engine,
+  type EventPublisher,
+} from '../src/core/engine';
 import { EventBus } from '../src/core/event-bus';
 import { InMemoryEventStore } from '../src/core/in-memory-store';
 import type { DomainEvent } from '../src/lib/events';
@@ -182,6 +187,48 @@ describe('Engine', () => {
     const state = await engine.getState('counter-new');
     expect(state).toEqual({ value: 0 });
   });
+
+  test('uses custom idGenerator when provided', async () => {
+    let counter = 0;
+    const customIdGenerator = () => `custom-id-${++counter}`;
+    const metaLessConfig: AggregateConfig<
+      CounterCommand,
+      CounterEvent,
+      CounterState,
+      NegativeAmountError
+    > = {
+      initialState: { value: 0 },
+      reducer: counterConfig.reducer,
+      decider: (command, _state) => {
+        if (command.type === 'Increment') {
+          if (command.amount <= 0) {
+            return err(new NegativeAmountError());
+          }
+          return ok([
+            {
+              type: 'Incremented',
+              data: { amount: command.amount },
+            },
+          ]);
+        }
+        return ok([]);
+      },
+    };
+    const customEngine = new Engine(store, metaLessConfig, {
+      idGenerator: customIdGenerator,
+    });
+
+    const result = await customEngine.execute({
+      type: 'Increment',
+      streamId: 'test-1',
+      amount: 5,
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value[0].meta?.id).toBe('custom-id-1');
+    }
+  });
 });
 
 describe('Engine.on (type-safe listener)', () => {
@@ -297,5 +344,31 @@ describe('Engine with EventBus', () => {
     });
 
     expect(received).toEqual([5]);
+  });
+
+  test('onPublishError is called when async publish rejects', async () => {
+    const errors: unknown[] = [];
+    const asyncBus: EventPublisher = {
+      publish: async () => {
+        throw new Error('Publish failed');
+      },
+    };
+    const engine = new Engine(store, counterConfig, {
+      bus: asyncBus,
+      onPublishError: (err, _event) => errors.push(err),
+    });
+
+    const result = await engine.execute({
+      type: 'Increment',
+      streamId: 'test-1',
+      amount: 5,
+    });
+
+    expect(result.ok).toBe(true);
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(errors).toHaveLength(1);
+    expect((errors[0] as Error).message).toBe('Publish failed');
   });
 });
