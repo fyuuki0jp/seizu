@@ -1,5 +1,3 @@
-import type { DomainEvent } from '../lib/events';
-
 /**
  * Snapshot of aggregate state at a specific version
  */

@@ -1,5 +1,5 @@
-import type { DomainEvent } from './events';
 import type { Projection } from '../core/projection';
+import type { DomainEvent } from './events';
 
 /**
  * Helper to define a projection with less boilerplate
@@ -16,7 +16,10 @@ import type { Projection } from '../core/projection';
  *   }
  * );
  */
-export const defineProjection = <TState, TEvent extends DomainEvent = DomainEvent>(
+export const defineProjection = <
+  TState,
+  TEvent extends DomainEvent = DomainEvent,
+>(
   name: string,
   init: () => TState,
   apply: (state: TState, event: TEvent) => TState

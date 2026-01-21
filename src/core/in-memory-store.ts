@@ -12,6 +12,8 @@ export class InMemoryEventStore<TEvent extends DomainEvent = DomainEvent>
 
   async readStream(streamId: string, fromVersion?: number): Promise<TEvent[]> {
     const events = this.streams.get(streamId) ?? [];
+    // Only slice if fromVersion is a positive number
+    // Negative values or 0 return all events (maintains backwards compatibility)
     if (fromVersion !== undefined && fromVersion > 0) {
       return events.slice(fromVersion);
     }

@@ -1,6 +1,6 @@
 import type { DomainEvent } from '../lib/events';
-import type { Projection, ProjectionStore } from './projection';
 import type { EventBus } from './event-bus';
+import type { Projection, ProjectionStore } from './projection';
 
 /**
  * Projector - Applies events to a projection and manages state persistence
@@ -80,9 +80,8 @@ export class Projector<TState, TEvent extends DomainEvent = DomainEvent> {
   ): () => void {
     const unsubscribers = eventTypes.map((eventType) =>
       bus.on(eventType, (event) => {
-        // Fire and forget - handle returns a Promise but we don't await it
-        // Errors should be handled by the EventBus error handler
-        this.handle(event as TEvent);
+        // Return the Promise so EventBus error handler can catch async errors
+        return this.handle(event as TEvent);
       })
     );
 

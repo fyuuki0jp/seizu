@@ -1,13 +1,10 @@
 /**
  * Domain Error - Plain Object interface
- * 
+ *
  * @example
  * type CartNotFound = DomainError<'CartNotFound', { cartId: string }>;
  */
-export interface DomainError<
-  TTag extends string = string,
-  TData = unknown
-> {
+export interface DomainError<TTag extends string = string, TData = unknown> {
   readonly tag: TTag;
   readonly message: string;
   readonly data?: TData;
@@ -15,17 +12,21 @@ export interface DomainError<
 
 /**
  * Helper to create a typed error factory
- * 
+ *
  * @example
  * const cartNotFound = defineError('CartNotFound', (cartId: string) => ({
  *   message: `Cart "${cartId}" does not exist`,
  *   data: { cartId },
  * }));
- * 
+ *
  * const error = cartNotFound('cart-123');
  * // => { tag: 'CartNotFound', message: 'Cart "cart-123" does not exist', data: { cartId: 'cart-123' } }
  */
-export const defineError = <TTag extends string, TArgs extends unknown[], TData = undefined>(
+export const defineError = <
+  TTag extends string,
+  TArgs extends unknown[],
+  TData = undefined,
+>(
   tag: TTag,
   create: (...args: TArgs) => { message: string; data?: TData }
 ) => {
@@ -44,6 +45,9 @@ export const isDomainError = <T extends DomainError>(
 ): error is T => {
   if (typeof error !== 'object' || error === null) return false;
   if (!('tag' in error) || !('message' in error)) return false;
+  // Validate that tag and message are strings
+  if (typeof (error as DomainError).tag !== 'string') return false;
+  if (typeof (error as DomainError).message !== 'string') return false;
   if (tag !== undefined && (error as DomainError).tag !== tag) return false;
   return true;
 };

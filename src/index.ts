@@ -1,53 +1,38 @@
 // RISE - Reactive Immutable State Engine
 
-// Result type (Railway Oriented Programming)
-export { type Result, ok, err, map, flatMap, isOk, isErr } from './lib/result';
-
-// Domain Events (Plain Object based)
-export { 
-  type EventMeta, 
-  type DomainEvent,
-  type ToEventMap, 
-  type EventType,
-  createMeta,
-  defineEvent,
-  // Legacy class support (deprecated)
-  DomainEventClass,
-} from './lib/events';
-
-// Event Store
-export { type EventStore } from './core/event-store';
-export { InMemoryEventStore } from './core/in-memory-store';
-
-// Engine
+// Core
 export {
   type AggregateConfig,
   type Command,
+  Engine,
   type EngineOptions,
   type EventPublisher,
-  type InferCommand,
-  type InferEvent,
-  type InferState,
-  type InferError,
-  Engine
 } from './core/engine';
-
-// Event Bus
-export { EventBus, type EventBusOptions, type ReactorErrorHandler } from './core/event-bus';
-
-// Domain Errors (Plain Object based)
 export {
-  type DomainError,
-  defineError,
-  isDomainError,
-} from './lib/errors';
-
-// Snapshot
-export { type Snapshot, type SnapshotStore } from './core/snapshot-store';
+  EventBus,
+  type EventBusOptions,
+  type ReactorErrorHandler,
+} from './core/event-bus';
+export type { EventStore } from './core/event-store';
+export { InMemoryProjectionStore } from './core/in-memory-projection-store';
 export { InMemorySnapshotStore } from './core/in-memory-snapshot-store';
+export { InMemoryEventStore } from './core/in-memory-store';
 
 // Projection
-export { type Projection, type ProjectionStore } from './core/projection';
-export { InMemoryProjectionStore } from './core/in-memory-projection-store';
-export { defineProjection } from './lib/projections';
+export type { Projection, ProjectionStore } from './core/projection';
 export { Projector } from './core/projector';
+// Snapshot
+export type { Snapshot, SnapshotStore } from './core/snapshot-store';
+export { type DomainError, defineError, isDomainError } from './lib/errors';
+
+// Domain primitives
+export {
+  createMeta,
+  type DomainEvent,
+  defineEvent,
+  type EventMeta,
+  type EventType,
+  type ToEventMap,
+} from './lib/events';
+export { defineProjection } from './lib/projections';
+export { err, flatMap, isErr, isOk, map, ok, type Result } from './lib/result';

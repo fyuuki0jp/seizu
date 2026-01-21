@@ -4,7 +4,9 @@ import type { ProjectionStore } from './projection';
  * In-memory projection store for development and testing
  * Not suitable for production - data is lost on restart
  */
-export class InMemoryProjectionStore<TState> implements ProjectionStore<TState> {
+export class InMemoryProjectionStore<TState>
+  implements ProjectionStore<TState>
+{
   private data = new Map<string, TState>();
 
   async get(id: string): Promise<TState | undefined> {
