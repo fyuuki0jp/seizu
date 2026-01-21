@@ -186,6 +186,13 @@ export const defineProjection = <TState, TEvent extends DomainEvent>(
 
 **実装完了日**: 2026-01-21
 
+**Git フロー**: GitHub Flow に従って実装
+- Feature ブランチ: `feature/v0.5.0-todo-implementation`
+- PR: https://github.com/fyuuki0jp/rise/pull/2
+- Commits: 
+  - `25415a5`: chore: update opencode.json
+  - `df9b70e`: feat: implement TODO.md items (v0.5.0)
+
 **主要機能追加**:
 1. **ID生成器のDI対応**: テスト時の固定ID注入が可能に（環境非依存化）
 2. **EventPublisher Promise化**: 非同期イベント発行（AWS EventBridge等）に対応可能に
@@ -200,8 +207,10 @@ export const defineProjection = <TState, TEvent extends DomainEvent>(
 - import パス修正の自動化と検証プロセスの確立
 
 **ドキュメント**:
+- CHANGELOG.md に v0.5.0 エントリ追加
 - README.md に clean-arch サンプル追加
 - clean-arch/README.md でアーキテクチャパターンを解説
+- package.json version を 0.5.0 に更新
 
 **計画レビュープロセス**:
 - plan-reviewer による2段階レビューで計画品質を向上
