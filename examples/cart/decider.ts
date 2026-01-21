@@ -1,19 +1,19 @@
-import { ok, err, type Result } from '../../src';
+import { err, ok, type Result } from '../../src';
 import type { CartCommand } from './commands';
-import type { CartState } from './state';
 import {
+  CartAlreadyExistsError,
+  type CartError,
+  CartNotFoundError,
+  InvalidQuantityError,
+  ItemNotInCartError,
+} from './errors';
+import {
+  type CartEvent,
   createCartCreated,
   createItemAdded,
   createItemRemoved,
-  type CartEvent,
 } from './events';
-import {
-  CartNotFoundError,
-  CartAlreadyExistsError,
-  ItemNotInCartError,
-  InvalidQuantityError,
-  type CartError,
-} from './errors';
+import type { CartState } from './state';
 
 // Decider - pure function, business logic lives here
 export const decider = (
@@ -50,9 +50,10 @@ export const decider = (
       return ok([createItemRemoved(command.itemId)]);
     }
 
-    default:
+    default: {
       // TypeScript exhaustiveness check
       const _exhaustive: never = command;
       return _exhaustive;
+    }
   }
 };

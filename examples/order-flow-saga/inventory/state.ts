@@ -14,7 +14,10 @@ export const initialState: InventoryState = {
   reserved: 0,
 };
 
-export const reducer = (state: InventoryState, event: InventoryEvent): InventoryState => {
+export const reducer = (
+  state: InventoryState,
+  event: InventoryEvent
+): InventoryState => {
   switch (event.type) {
     case 'StockInitialized':
       return {

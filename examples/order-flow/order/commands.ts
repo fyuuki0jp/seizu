@@ -13,7 +13,11 @@ export interface ConfirmOrder extends Command {
 export type OrderCommand = PlaceOrder | ConfirmOrder;
 
 // Factory functions
-export const placeOrder = (orderId: string, productId: string, quantity: number): PlaceOrder => ({
+export const placeOrder = (
+  orderId: string,
+  productId: string,
+  quantity: number
+): PlaceOrder => ({
   type: 'PlaceOrder',
   streamId: orderId,
   productId,

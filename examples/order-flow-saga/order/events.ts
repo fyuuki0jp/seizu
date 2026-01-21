@@ -1,15 +1,12 @@
-import { createMeta } from '../../../src';
 import type { DomainEvent } from '../../../src';
+import { createMeta } from '../../../src';
 
 export type OrderPlaced = DomainEvent<
   'OrderPlaced',
   { orderId: string; productId: string; quantity: number }
 >;
 
-export type OrderConfirmed = DomainEvent<
-  'OrderConfirmed',
-  { orderId: string }
->;
+export type OrderConfirmed = DomainEvent<'OrderConfirmed', { orderId: string }>;
 
 export type OrderCancelled = DomainEvent<
   'OrderCancelled',
@@ -32,7 +29,10 @@ export const createOrderConfirmed = (orderId: string): OrderConfirmed => ({
   meta: createMeta(),
 });
 
-export const createOrderCancelled = (orderId: string, reason: string): OrderCancelled => ({
+export const createOrderCancelled = (
+  orderId: string,
+  reason: string
+): OrderCancelled => ({
   type: 'OrderCancelled',
   data: { orderId, reason },
   meta: createMeta(),

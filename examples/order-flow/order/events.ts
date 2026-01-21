@@ -1,15 +1,12 @@
-import { createMeta } from '../../../src';
 import type { DomainEvent } from '../../../src';
+import { createMeta } from '../../../src';
 
 export type OrderPlaced = DomainEvent<
   'OrderPlaced',
   { orderId: string; productId: string; quantity: number }
 >;
 
-export type OrderConfirmed = DomainEvent<
-  'OrderConfirmed',
-  { orderId: string }
->;
+export type OrderConfirmed = DomainEvent<'OrderConfirmed', { orderId: string }>;
 
 export const createOrderPlaced = (
   orderId: string,

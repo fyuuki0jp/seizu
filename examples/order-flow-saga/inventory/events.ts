@@ -1,5 +1,5 @@
-import { createMeta } from '../../../src';
 import type { DomainEvent } from '../../../src';
+import { createMeta } from '../../../src';
 
 export type StockInitialized = DomainEvent<
   'StockInitialized',

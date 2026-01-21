@@ -1,8 +1,8 @@
 import { Engine, InMemoryEventStore, isOk } from '../../src';
-import { createCart, addItem, removeItem } from './commands';
+import { addItem, createCart, removeItem } from './commands';
+import { decider } from './decider';
 import type { CartEvent } from './events';
 import { initialState, reducer } from './state';
-import { decider } from './decider';
 
 // Create the engine with our domain configuration
 // 型パラメータを明示的に指定しなくても、config から型が推論される

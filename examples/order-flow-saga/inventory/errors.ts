@@ -8,7 +8,9 @@ export class InventoryNotInitializedError extends Error {
 export class InsufficientStockError extends Error {
   readonly _tag = 'InsufficientStockError';
   constructor(productId: string, requested: number, available: number) {
-    super(`Insufficient stock for "${productId}": requested ${requested}, available ${available}`);
+    super(
+      `Insufficient stock for "${productId}": requested ${requested}, available ${available}`
+    );
   }
 }
 
@@ -19,4 +21,7 @@ export class InventoryAlreadyInitializedError extends Error {
   }
 }
 
-export type InventoryError = InventoryNotInitializedError | InsufficientStockError | InventoryAlreadyInitializedError;
+export type InventoryError =
+  | InventoryNotInitializedError
+  | InsufficientStockError
+  | InventoryAlreadyInitializedError;

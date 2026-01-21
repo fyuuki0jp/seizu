@@ -1,19 +1,29 @@
 import type { AggregateConfig } from '../../../src';
-import { initialState, reducer } from './state';
-import { decider } from './decider';
 import type { PurchaseOrderCommand } from './commands';
+import { decider } from './decider';
+import type { PurchaseOrderError } from './errors';
 import type { PurchaseOrderEvent } from './events';
 import type { PurchaseOrderState } from './state';
-import type { PurchaseOrderError } from './errors';
+import { initialState, reducer } from './state';
 
-export const purchaseOrderAggregate: AggregateConfig<PurchaseOrderCommand, PurchaseOrderEvent, PurchaseOrderState, PurchaseOrderError> = {
+export const purchaseOrderAggregate: AggregateConfig<
+  PurchaseOrderCommand,
+  PurchaseOrderEvent,
+  PurchaseOrderState,
+  PurchaseOrderError
+> = {
   initialState,
   reducer,
   decider,
 };
 
 // Re-export types
-export type { PurchaseOrderCommand, PurchaseOrderEvent, PurchaseOrderState, PurchaseOrderError };
+export type {
+  PurchaseOrderCommand,
+  PurchaseOrderEvent,
+  PurchaseOrderState,
+  PurchaseOrderError,
+};
 
 // Re-export command factories
 export { createPurchaseOrder } from './commands';

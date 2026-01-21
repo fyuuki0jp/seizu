@@ -8,7 +8,10 @@ export interface ProcessPayment extends Command {
 
 export type PaymentCommand = ProcessPayment;
 
-export const processPayment = (orderId: string, amount: number): ProcessPayment => ({
+export const processPayment = (
+  orderId: string,
+  amount: number
+): ProcessPayment => ({
   type: 'ProcessPayment',
   streamId: `payment-${orderId}`,
   orderId,

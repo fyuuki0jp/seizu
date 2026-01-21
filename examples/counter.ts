@@ -12,15 +12,15 @@
  */
 
 import {
-  Engine,
-  InMemoryEventStore,
-  ok,
-  err,
-  isOk,
+  type Command,
   createMeta,
   type DomainEvent,
+  Engine,
+  err,
+  InMemoryEventStore,
+  isOk,
+  ok,
   type Result,
-  type Command,
 } from '../src';
 
 // ============================================

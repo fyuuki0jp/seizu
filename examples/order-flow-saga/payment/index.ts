@@ -1,12 +1,17 @@
 import type { AggregateConfig } from '../../../src';
-import { initialState, reducer } from './state';
-import { decider } from './decider';
 import type { PaymentCommand } from './commands';
+import { decider } from './decider';
+import type { PaymentError } from './errors';
 import type { PaymentEvent } from './events';
 import type { PaymentState } from './state';
-import type { PaymentError } from './errors';
+import { initialState, reducer } from './state';
 
-export const paymentAggregate: AggregateConfig<PaymentCommand, PaymentEvent, PaymentState, PaymentError> = {
+export const paymentAggregate: AggregateConfig<
+  PaymentCommand,
+  PaymentEvent,
+  PaymentState,
+  PaymentError
+> = {
   initialState,
   reducer,
   decider,
@@ -19,5 +24,5 @@ export type { PaymentCommand, PaymentEvent, PaymentState, PaymentError };
 export { processPayment } from './commands';
 
 // Re-export event types and factories
-export type { PaymentProcessed, PaymentFailed } from './events';
-export { createPaymentProcessed, createPaymentFailed } from './events';
+export type { PaymentFailed, PaymentProcessed } from './events';
+export { createPaymentFailed, createPaymentProcessed } from './events';

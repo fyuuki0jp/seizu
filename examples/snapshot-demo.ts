@@ -10,15 +10,15 @@
  */
 
 import {
+  type Command,
+  createMeta,
+  type DomainEvent,
   Engine,
+  err,
   InMemoryEventStore,
   InMemorySnapshotStore,
   ok,
-  err,
-  createMeta,
-  type DomainEvent,
   type Result,
-  type Command,
 } from '../src';
 
 // ============================================
@@ -66,7 +66,7 @@ type CounterCommand = Increment;
 
 const decider = (
   command: CounterCommand,
-  state: CounterState
+  _state: CounterState
 ): Result<CounterEvent[], Error> => {
   switch (command.type) {
     case 'Increment':
@@ -93,16 +93,24 @@ async function main() {
   // --- Part 1: Manual Snapshot ---
 
   console.log('1. Adding 100 increment events...');
-  const engine1 = new Engine(eventStore, {
-    initialState,
-    reducer,
-    decider,
-  }, {
-    snapshotStore,
-  });
+  const engine1 = new Engine(
+    eventStore,
+    {
+      initialState,
+      reducer,
+      decider,
+    },
+    {
+      snapshotStore,
+    }
+  );
 
   for (let i = 0; i < 100; i++) {
-    await engine1.execute({ type: 'Increment', streamId: counterId, amount: 1 });
+    await engine1.execute({
+      type: 'Increment',
+      streamId: counterId,
+      amount: 1,
+    });
   }
   const state1 = await engine1.getState(counterId);
   console.log(`   Done. Current count: ${state1.count}`);
@@ -114,7 +122,11 @@ async function main() {
 
   console.log('\n3. Adding 10 more events...');
   for (let i = 0; i < 10; i++) {
-    await engine1.execute({ type: 'Increment', streamId: counterId, amount: 1 });
+    await engine1.execute({
+      type: 'Increment',
+      streamId: counterId,
+      amount: 1,
+    });
   }
   const state2 = await engine1.getState(counterId);
   console.log(`   Done. Current count: ${state2.count}`);
@@ -123,17 +135,23 @@ async function main() {
 
   console.log('\n4. Simulating restart (new Engine instance)...');
   // Create a new engine instance (simulates application restart)
-  const engine2 = new Engine(eventStore, {
-    initialState,
-    reducer,
-    decider,
-  }, {
-    snapshotStore,
-  });
+  const engine2 = new Engine(
+    eventStore,
+    {
+      initialState,
+      reducer,
+      decider,
+    },
+    {
+      snapshotStore,
+    }
+  );
 
   // getState will automatically use snapshot + replay events since snapshot
   const restoredState = await engine2.getState(counterId);
-  console.log(`   Loaded from snapshot (version ${snapshot?.version}) + 10 events`);
+  console.log(
+    `   Loaded from snapshot (version ${snapshot?.version}) + 10 events`
+  );
   console.log(`   State restored: count = ${restoredState.count}`);
 
   // --- Part 3: snapshotEvery option ---
@@ -145,20 +163,28 @@ async function main() {
   const snapshotStore2 = new InMemorySnapshotStore<CounterState>();
   const counter2Id = 'counter-2';
 
-  const engine3 = new Engine(eventStore2, {
-    initialState,
-    reducer,
-    decider,
-  }, {
-    snapshotStore: snapshotStore2,
-    snapshotEvery: 5,
-  });
+  const engine3 = new Engine(
+    eventStore2,
+    {
+      initialState,
+      reducer,
+      decider,
+    },
+    {
+      snapshotStore: snapshotStore2,
+      snapshotEvery: 5,
+    }
+  );
 
   // Track snapshots taken
   const snapshotVersions: number[] = [];
 
   for (let i = 0; i < 12; i++) {
-    await engine3.execute({ type: 'Increment', streamId: counter2Id, amount: 1 });
+    await engine3.execute({
+      type: 'Increment',
+      streamId: counter2Id,
+      amount: 1,
+    });
 
     // Check if a new snapshot was taken
     const snap = await snapshotStore2.load(counter2Id);
@@ -167,7 +193,9 @@ async function main() {
     }
   }
 
-  console.log(`   After 12 events, snapshots taken at: ${snapshotVersions.join(', ')}`);
+  console.log(
+    `   After 12 events, snapshots taken at: ${snapshotVersions.join(', ')}`
+  );
 
   const finalState = await engine3.getState(counter2Id);
   console.log(`   Final count: ${finalState.count}`);

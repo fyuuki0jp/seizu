@@ -1,14 +1,19 @@
-import { ok, err, type Result } from '../../../src';
+import { err, ok, type Result } from '../../../src';
 import type { OrderCommand } from './commands';
-import type { OrderState } from './state';
-import { createOrderPlaced, createOrderConfirmed, createOrderCancelled, type OrderEvent } from './events';
 import {
-  OrderAlreadyExistsError,
-  OrderNotFoundError,
-  OrderAlreadyConfirmedError,
   OrderAlreadyCancelledError,
+  OrderAlreadyConfirmedError,
+  OrderAlreadyExistsError,
   type OrderError,
+  OrderNotFoundError,
 } from './errors';
+import {
+  createOrderCancelled,
+  createOrderConfirmed,
+  createOrderPlaced,
+  type OrderEvent,
+} from './events';
+import type { OrderState } from './state';
 
 export const decider = (
   command: OrderCommand,
@@ -19,7 +24,13 @@ export const decider = (
       if (state.exists) {
         return err(new OrderAlreadyExistsError(command.streamId));
       }
-      return ok([createOrderPlaced(command.streamId, command.productId, command.quantity)]);
+      return ok([
+        createOrderPlaced(
+          command.streamId,
+          command.productId,
+          command.quantity
+        ),
+      ]);
     }
     case 'ConfirmOrder': {
       if (!state.exists) {

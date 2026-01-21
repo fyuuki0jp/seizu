@@ -22,4 +22,7 @@ export class OrderAlreadyConfirmedError extends Error {
   }
 }
 
-export type OrderError = OrderAlreadyExistsError | OrderNotFoundError | OrderAlreadyConfirmedError;
+export type OrderError =
+  | OrderAlreadyExistsError
+  | OrderNotFoundError
+  | OrderAlreadyConfirmedError;

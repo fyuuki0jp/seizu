@@ -1,5 +1,5 @@
-import { createMeta } from '../../src';
 import type { DomainEvent } from '../../src';
+import { createMeta } from '../../src';
 
 // Domain Events - what happened (past tense, immutable facts)
 // Using Plain Object style
@@ -17,7 +17,10 @@ export type ItemAdded = DomainEvent<
 export type ItemRemoved = DomainEvent<'ItemRemoved', { itemId: string }>;
 
 // Event factory functions
-export const createCartCreated = (cartId: string, userId: string): CartCreated => ({
+export const createCartCreated = (
+  cartId: string,
+  userId: string
+): CartCreated => ({
   type: 'CartCreated',
   data: { cartId, userId },
   meta: createMeta(),

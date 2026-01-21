@@ -11,24 +11,27 @@
  */
 
 import {
-  Engine,
-  InMemoryEventStore,
-  InMemoryProjectionStore,
-  Projector,
-  defineProjection,
-  EventBus,
-  ok,
+  type Command,
   createMeta,
   type DomainEvent,
+  defineProjection,
+  Engine,
+  EventBus,
+  InMemoryEventStore,
+  InMemoryProjectionStore,
+  ok,
+  Projector,
   type Result,
-  type Command,
 } from '../src';
 
 // ============================================
 // 1. Events - Order lifecycle
 // ============================================
 
-type OrderPlaced = DomainEvent<'OrderPlaced', { orderId: string; amount: number }>;
+type OrderPlaced = DomainEvent<
+  'OrderPlaced',
+  { orderId: string; amount: number }
+>;
 type OrderConfirmed = DomainEvent<'OrderConfirmed', { orderId: string }>;
 type OrderCancelled = DomainEvent<'OrderCancelled', { orderId: string }>;
 type OrderEvent = OrderPlaced | OrderConfirmed | OrderCancelled;
@@ -70,7 +73,11 @@ const initialState: OrderState = {
 const reducer = (state: OrderState, event: OrderEvent): OrderState => {
   switch (event.type) {
     case 'OrderPlaced':
-      return { orderId: event.data.orderId, amount: event.data.amount, status: 'placed' };
+      return {
+        orderId: event.data.orderId,
+        amount: event.data.amount,
+        status: 'placed',
+      };
     case 'OrderConfirmed':
       return { ...state, status: 'confirmed' };
     case 'OrderCancelled':
@@ -82,7 +89,11 @@ const reducer = (state: OrderState, event: OrderEvent): OrderState => {
 // 3. Commands
 // ============================================
 
-type PlaceOrder = Command & { type: 'PlaceOrder'; orderId: string; amount: number };
+type PlaceOrder = Command & {
+  type: 'PlaceOrder';
+  orderId: string;
+  amount: number;
+};
 type ConfirmOrder = Command & { type: 'ConfirmOrder' };
 type CancelOrder = Command & { type: 'CancelOrder' };
 type OrderCommand = PlaceOrder | ConfirmOrder | CancelOrder;
@@ -118,7 +129,11 @@ const orderSummaryProjection = defineProjection<OrderSummaryState, OrderEvent>(
   (state, event) => {
     switch (event.type) {
       case 'OrderPlaced':
-        return { orderId: event.data.orderId, amount: event.data.amount, status: 'placed' };
+        return {
+          orderId: event.data.orderId,
+          amount: event.data.amount,
+          status: 'placed',
+        };
       case 'OrderConfirmed':
         return { ...state, status: 'confirmed' };
       case 'OrderCancelled':
@@ -165,11 +180,15 @@ async function main() {
   const bus = new EventBus<OrderEvent>();
   const eventStore = new InMemoryEventStore<OrderEvent>();
 
-  const engine = new Engine(eventStore, {
-    initialState,
-    reducer,
-    decider,
-  }, { bus });
+  const engine = new Engine(
+    eventStore,
+    {
+      initialState,
+      reducer,
+      decider,
+    },
+    { bus }
+  );
 
   // Setup Projections with Projector
   const orderSummaryStore = new InMemoryProjectionStore<OrderSummaryState>();
@@ -190,7 +209,11 @@ async function main() {
   const orderAmounts = new Map<string, number>();
 
   // Subscribe projectors to EventBus
-  orderSummaryProjector.subscribe(bus, ['OrderPlaced', 'OrderConfirmed', 'OrderCancelled']);
+  orderSummaryProjector.subscribe(bus, [
+    'OrderPlaced',
+    'OrderConfirmed',
+    'OrderCancelled',
+  ]);
 
   // For statistics, we need custom handling to track revenue
   bus.on('OrderPlaced', async (event) => {
@@ -199,7 +222,8 @@ async function main() {
   });
   bus.on('OrderConfirmed', async (event) => {
     // Add revenue when confirmed
-    const current = (await statisticsStore.get('global')) ?? statisticsProjection.init();
+    const current =
+      (await statisticsStore.get('global')) ?? statisticsProjection.init();
     const amount = orderAmounts.get(event.data.orderId) ?? 0;
     await statisticsStore.set('global', {
       ...current,
@@ -215,10 +239,20 @@ async function main() {
 
   console.log('1. Processing order events...');
 
-  await engine.execute({ type: 'PlaceOrder', streamId: 'order-1', orderId: 'order-1', amount: 100 });
+  await engine.execute({
+    type: 'PlaceOrder',
+    streamId: 'order-1',
+    orderId: 'order-1',
+    amount: 100,
+  });
   console.log('   OrderPlaced: order-1 ($100)');
 
-  await engine.execute({ type: 'PlaceOrder', streamId: 'order-2', orderId: 'order-2', amount: 200 });
+  await engine.execute({
+    type: 'PlaceOrder',
+    streamId: 'order-2',
+    orderId: 'order-2',
+    amount: 200,
+  });
   console.log('   OrderPlaced: order-2 ($200)');
 
   await engine.execute({ type: 'ConfirmOrder', streamId: 'order-1' });
@@ -228,7 +262,7 @@ async function main() {
   console.log('   OrderCancelled: order-2');
 
   // Wait a bit for async projectors to complete
-  await new Promise(resolve => setTimeout(resolve, 10));
+  await new Promise((resolve) => setTimeout(resolve, 10));
 
   // --- Part 2: Query Order Summary Projection ---
 
@@ -241,7 +275,8 @@ async function main() {
   // --- Part 3: Query Statistics Projection ---
 
   console.log('\n3. Statistics Projection:');
-  const stats = (await statisticsStore.get('global')) ?? statisticsProjection.init();
+  const stats =
+    (await statisticsStore.get('global')) ?? statisticsProjection.init();
   console.log(`   Total orders: ${stats.totalOrders}`);
   console.log(`   Confirmed: ${stats.confirmed}`);
   console.log(`   Cancelled: ${stats.cancelled}`);

@@ -1,19 +1,43 @@
 import { Engine, EventBus, InMemoryEventStore, isOk } from '../../src';
-
-import { orderAggregate, placeOrder, confirmOrder, cancelOrder, type OrderEvent } from './order';
-import { inventoryAggregate, reserveStock, releaseStock, initializeStock, type InventoryEvent } from './inventory';
-import { paymentAggregate, processPayment, type PaymentEvent } from './payment';
+import {
+  type InventoryEvent,
+  initializeStock,
+  inventoryAggregate,
+  releaseStock,
+  reserveStock,
+} from './inventory';
+import {
+  cancelOrder,
+  confirmOrder,
+  type OrderEvent,
+  orderAggregate,
+  placeOrder,
+} from './order';
+import { type PaymentEvent, paymentAggregate, processPayment } from './payment';
 
 type AllEvents = OrderEvent | InventoryEvent | PaymentEvent;
 
 const bus = new EventBus<AllEvents>({
-  onError: (error, event) => console.error(`❌ Reactor error on ${event.type}:`, error),
+  onError: (error, event) =>
+    console.error(`❌ Reactor error on ${event.type}:`, error),
 });
 
 // Engines
-const orderEngine = new Engine(new InMemoryEventStore<OrderEvent>(), orderAggregate, { bus });
-const inventoryEngine = new Engine(new InMemoryEventStore<InventoryEvent>(), inventoryAggregate, { bus });
-const paymentEngine = new Engine(new InMemoryEventStore<PaymentEvent>(), paymentAggregate, { bus });
+const orderEngine = new Engine(
+  new InMemoryEventStore<OrderEvent>(),
+  orderAggregate,
+  { bus }
+);
+const inventoryEngine = new Engine(
+  new InMemoryEventStore<InventoryEvent>(),
+  inventoryAggregate,
+  { bus }
+);
+const paymentEngine = new Engine(
+  new InMemoryEventStore<PaymentEvent>(),
+  paymentAggregate,
+  { bus }
+);
 
 // ===== Reactors: 正常フロー =====
 
@@ -30,7 +54,9 @@ bus.on('OrderPlaced', async (e) => {
 bus.on('StockReserved', async (e) => {
   console.log(`  ✅ Stock reserved: ${e.data.quantity}x ${e.data.productId}`);
   console.log(`  💳 Processing payment...`);
-  await paymentEngine.execute(processPayment(e.data.orderId, e.data.quantity * 100)); // 仮の金額
+  await paymentEngine.execute(
+    processPayment(e.data.orderId, e.data.quantity * 100)
+  ); // 仮の金額
 });
 
 bus.on('PaymentProcessed', async (e) => {
@@ -44,7 +70,7 @@ bus.on('PaymentProcessed', async (e) => {
 bus.on('PaymentFailed', async (e) => {
   console.log(`  ❌ Payment failed: ${e.data.reason}`);
   console.log(`  ↩️  Releasing stock (compensation)...`);
-  
+
   // 在庫情報を取得するため、orderId から productId と quantity を復元
   const orderState = await orderEngine.getState(e.data.orderId);
   if (orderState.productId) {
@@ -97,7 +123,9 @@ async function main() {
   // 最終状態
   console.log('=== Final States ===');
   const inv = await inventoryEngine.getState('inventory-apple');
-  console.log(`Inventory: ${inv.available} available, ${inv.reserved} reserved`);
+  console.log(
+    `Inventory: ${inv.available} available, ${inv.reserved} reserved`
+  );
 
   for (const id of ['order-001', 'fail-002', 'order-003']) {
     const state = await orderEngine.getState(id);
@@ -107,5 +135,5 @@ async function main() {
   console.log('\n✨ Done!');
 }
 
-const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 main().catch(console.error);

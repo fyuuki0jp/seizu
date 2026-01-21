@@ -1,5 +1,5 @@
-import { createMeta } from '../../../src';
 import type { DomainEvent } from '../../../src';
+import { createMeta } from '../../../src';
 
 export type StockInitialized = DomainEvent<
   'StockInitialized',
@@ -59,4 +59,8 @@ export const createStockReleased = (
   meta: createMeta(),
 });
 
-export type InventoryEvent = StockInitialized | StockReserved | StockDepleted | StockReleased;
+export type InventoryEvent =
+  | StockInitialized
+  | StockReserved
+  | StockDepleted
+  | StockReleased;

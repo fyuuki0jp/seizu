@@ -16,7 +16,10 @@ export const initialState: PaymentState = {
   amount: 0,
 };
 
-export const reducer = (state: PaymentState, event: PaymentEvent): PaymentState => {
+export const reducer = (
+  state: PaymentState,
+  event: PaymentEvent
+): PaymentState => {
   switch (event.type) {
     case 'PaymentProcessed':
       return {

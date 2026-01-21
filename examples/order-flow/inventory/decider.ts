@@ -1,15 +1,20 @@
 import type { Result } from '../../../src';
-import { ok, err } from '../../../src';
+import { err, ok } from '../../../src';
 import type { InventoryCommand } from './commands';
+import {
+  InsufficientStockError,
+  InventoryAlreadyInitializedError,
+  type InventoryError,
+  InventoryNotInitializedError,
+} from './errors';
 import type { InventoryEvent } from './events';
 import {
-  createStockInitialized,
-  createStockReserved,
   createStockDepleted,
+  createStockInitialized,
   createStockReleased,
+  createStockReserved,
 } from './events';
 import type { InventoryState } from './state';
-import { InventoryNotInitializedError, InsufficientStockError, InventoryAlreadyInitializedError, type InventoryError } from './errors';
 
 const LOW_STOCK_THRESHOLD = 5;
 
@@ -32,11 +37,17 @@ export const decider = (
         return err(new InventoryNotInitializedError(productId));
       }
       if (state.available < command.quantity) {
-        return err(new InsufficientStockError(productId, command.quantity, state.available));
+        return err(
+          new InsufficientStockError(
+            productId,
+            command.quantity,
+            state.available
+          )
+        );
       }
 
       const events: InventoryEvent[] = [
-        createStockReserved(productId, command.quantity, command.orderId)
+        createStockReserved(productId, command.quantity, command.orderId),
       ];
 
       // 在庫が閾値を下回ったら StockDepleted を発行
@@ -52,7 +63,9 @@ export const decider = (
       if (!state.initialized) {
         return err(new InventoryNotInitializedError(productId));
       }
-      return ok([createStockReleased(productId, command.quantity, command.orderId)]);
+      return ok([
+        createStockReleased(productId, command.quantity, command.orderId),
+      ]);
     }
     default:
       return ok([]);

@@ -1,9 +1,22 @@
 import { Engine, EventBus, InMemoryEventStore, isOk } from '../../src';
-
+import {
+  type InventoryEvent,
+  initializeStock,
+  inventoryAggregate,
+  reserveStock,
+} from './inventory';
 // ===== 1. Aggregate Imports (簡素化されたインポート) =====
-import { orderAggregate, placeOrder, confirmOrder, type OrderEvent } from './order';
-import { inventoryAggregate, reserveStock, initializeStock, type InventoryEvent } from './inventory';
-import { purchaseOrderAggregate, createPurchaseOrder, type PurchaseOrderEvent } from './purchase-order';
+import {
+  confirmOrder,
+  type OrderEvent,
+  orderAggregate,
+  placeOrder,
+} from './order';
+import {
+  createPurchaseOrder,
+  type PurchaseOrderEvent,
+  purchaseOrderAggregate,
+} from './purchase-order';
 
 type AllEvents = OrderEvent | InventoryEvent | PurchaseOrderEvent;
 
@@ -38,11 +51,11 @@ const poEngine = new Engine(
 // OrderPlaced → 在庫を予約
 bus.on('OrderPlaced', async (event) => {
   console.log(`  📦 Order placed: ${event.data.orderId}`);
-  
+
   const result = await inventoryEngine.execute(
     reserveStock(event.data.productId, event.data.quantity, event.data.orderId)
   );
-  
+
   if (!isOk(result)) {
     console.log(`  ❌ Stock reservation failed: ${result.error.message}`);
   }
@@ -50,16 +63,20 @@ bus.on('OrderPlaced', async (event) => {
 
 // StockReserved → 注文を確定
 bus.on('StockReserved', async (event) => {
-  console.log(`  ✅ Stock reserved: ${event.data.quantity}x ${event.data.productId}`);
-  
+  console.log(
+    `  ✅ Stock reserved: ${event.data.quantity}x ${event.data.productId}`
+  );
+
   await orderEngine.execute(confirmOrder(event.data.orderId));
   console.log(`  🎉 Order confirmed: ${event.data.orderId}`);
 });
 
 // StockDepleted → 自動発注
 bus.on('StockDepleted', async (event) => {
-  console.log(`  ⚠️  Low stock alert: ${event.data.productId} (${event.data.remainingStock} left)`);
-  
+  console.log(
+    `  ⚠️  Low stock alert: ${event.data.productId} (${event.data.remainingStock} left)`
+  );
+
   const poId = `po-${event.data.productId}-${Date.now()}`;
   await poEngine.execute(createPurchaseOrder(poId, event.data.productId, 100));
   console.log(`  📋 Auto-reorder created: ${poId}`);
@@ -100,7 +117,9 @@ async function main() {
   // Final state
   console.log('=== Final States ===');
   const inv = await inventoryEngine.getState('inventory-apple');
-  console.log(`Inventory: ${inv.available} available, ${inv.reserved} reserved`);
+  console.log(
+    `Inventory: ${inv.available} available, ${inv.reserved} reserved`
+  );
 
   for (const id of ['order-001', 'order-002', 'order-003']) {
     const state = await orderEngine.getState(id);
@@ -110,6 +129,6 @@ async function main() {
   console.log('\n✨ Done!');
 }
 
-const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 main().catch(console.error);

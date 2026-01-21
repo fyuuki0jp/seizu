@@ -1,28 +1,43 @@
 import type { AggregateConfig } from '../../../src';
-import { initialState, reducer } from './state';
-import { decider } from './decider';
 import type { InventoryCommand } from './commands';
+import { decider } from './decider';
+import type { InventoryError } from './errors';
 import type { InventoryEvent } from './events';
 import type { InventoryState } from './state';
-import type { InventoryError } from './errors';
+import { initialState, reducer } from './state';
 
-export const inventoryAggregate: AggregateConfig<InventoryCommand, InventoryEvent, InventoryState, InventoryError> = {
+export const inventoryAggregate: AggregateConfig<
+  InventoryCommand,
+  InventoryEvent,
+  InventoryState,
+  InventoryError
+> = {
   initialState,
   reducer,
   decider,
 };
 
 // Re-export types
-export type { InventoryCommand, InventoryEvent, InventoryState, InventoryError };
+export type {
+  InventoryCommand,
+  InventoryEvent,
+  InventoryState,
+  InventoryError,
+};
 
 // Re-export command factories
-export { initializeStock, reserveStock, releaseStock } from './commands';
+export { initializeStock, releaseStock, reserveStock } from './commands';
 
 // Re-export event types and factories
-export type { StockInitialized, StockReserved, StockDepleted, StockReleased } from './events';
+export type {
+  StockDepleted,
+  StockInitialized,
+  StockReleased,
+  StockReserved,
+} from './events';
 export {
-  createStockInitialized,
-  createStockReserved,
   createStockDepleted,
+  createStockInitialized,
   createStockReleased,
+  createStockReserved,
 } from './events';

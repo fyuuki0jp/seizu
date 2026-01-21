@@ -1,10 +1,13 @@
 import type { Result } from '../../../src';
-import { ok, err } from '../../../src';
+import { err, ok } from '../../../src';
 import type { PurchaseOrderCommand } from './commands';
+import {
+  PurchaseOrderAlreadyExistsError,
+  type PurchaseOrderError,
+} from './errors';
 import type { PurchaseOrderEvent } from './events';
 import { createPurchaseOrderCreated } from './events';
 import type { PurchaseOrderState } from './state';
-import { PurchaseOrderAlreadyExistsError, type PurchaseOrderError } from './errors';
 
 export const decider = (
   command: PurchaseOrderCommand,
@@ -16,7 +19,11 @@ export const decider = (
         return err(new PurchaseOrderAlreadyExistsError(command.streamId));
       }
       return ok([
-        createPurchaseOrderCreated(command.streamId, command.productId, command.quantity)
+        createPurchaseOrderCreated(
+          command.streamId,
+          command.productId,
+          command.quantity
+        ),
       ]);
     }
     default:

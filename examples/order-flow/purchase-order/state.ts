@@ -12,7 +12,10 @@ export const initialState: PurchaseOrderState = {
   quantity: 0,
 };
 
-export const reducer = (state: PurchaseOrderState, event: PurchaseOrderEvent): PurchaseOrderState => {
+export const reducer = (
+  state: PurchaseOrderState,
+  event: PurchaseOrderEvent
+): PurchaseOrderState => {
   switch (event.type) {
     case 'PurchaseOrderCreated':
       return {

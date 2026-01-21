@@ -3,8 +3,8 @@ import type { InventoryEvent } from './events';
 export interface InventoryState {
   initialized: boolean;
   productId: string | null;
-  available: number;  // 利用可能な在庫
-  reserved: number;   // 予約済みの在庫
+  available: number; // 利用可能な在庫
+  reserved: number; // 予約済みの在庫
 }
 
 export const initialState: InventoryState = {
@@ -14,7 +14,10 @@ export const initialState: InventoryState = {
   reserved: 0,
 };
 
-export const reducer = (state: InventoryState, event: InventoryEvent): InventoryState => {
+export const reducer = (
+  state: InventoryState,
+  event: InventoryEvent
+): InventoryState => {
   switch (event.type) {
     case 'StockInitialized':
       return {
