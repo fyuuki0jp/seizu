@@ -1,14 +1,20 @@
-import { describe, test, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, test } from 'vitest';
 import type { DomainEvent } from '../src';
 import { createMeta, EventBus } from '../src';
-import { defineProjection } from '../src/lib/projections';
 import { InMemoryProjectionStore } from '../src/core/in-memory-projection-store';
 import { Projector } from '../src/core/projector';
+import { defineProjection } from '../src/lib/projections';
 
 // Test event types
-type OrderPlaced = DomainEvent<'OrderPlaced', { orderId: string; amount: number }>;
+type OrderPlaced = DomainEvent<
+  'OrderPlaced',
+  { orderId: string; amount: number }
+>;
 type OrderCancelled = DomainEvent<'OrderCancelled', { orderId: string }>;
-type ItemAdded = DomainEvent<'ItemAdded', { orderId: string; itemId: string; qty: number }>;
+type ItemAdded = DomainEvent<
+  'ItemAdded',
+  { orderId: string; itemId: string; qty: number }
+>;
 
 type OrderEvent = OrderPlaced | OrderCancelled | ItemAdded;
 
@@ -25,7 +31,11 @@ const createOrderCancelled = (orderId: string): OrderCancelled => ({
   meta: createMeta(),
 });
 
-const createItemAdded = (orderId: string, itemId: string, qty: number): ItemAdded => ({
+const createItemAdded = (
+  orderId: string,
+  itemId: string,
+  qty: number
+): ItemAdded => ({
   type: 'ItemAdded',
   data: { orderId, itemId, qty },
   meta: createMeta(),
@@ -47,7 +57,11 @@ describe('defineProjection', () => {
       (state, event) => {
         switch (event.type) {
           case 'OrderPlaced':
-            return { ...state, orderId: event.data.orderId, totalAmount: event.data.amount };
+            return {
+              ...state,
+              orderId: event.data.orderId,
+              totalAmount: event.data.amount,
+            };
           case 'OrderCancelled':
             return { ...state, status: 'cancelled' };
           case 'ItemAdded':
@@ -75,7 +89,11 @@ describe('defineProjection', () => {
       () => ({ orderId: '', totalAmount: 0, itemCount: 0, status: 'active' }),
       (state, event) => {
         if (event.type === 'OrderPlaced') {
-          return { ...state, orderId: event.data.orderId, totalAmount: event.data.amount };
+          return {
+            ...state,
+            orderId: event.data.orderId,
+            totalAmount: event.data.amount,
+          };
         }
         return state;
       }
@@ -206,7 +224,11 @@ describe('Projector', () => {
     (state, event) => {
       switch (event.type) {
         case 'OrderPlaced':
-          return { ...state, orderId: event.data.orderId, totalAmount: event.data.amount };
+          return {
+            ...state,
+            orderId: event.data.orderId,
+            totalAmount: event.data.amount,
+          };
         case 'OrderCancelled':
           return { ...state, status: 'cancelled' };
         case 'ItemAdded':
@@ -219,7 +241,11 @@ describe('Projector', () => {
 
   beforeEach(() => {
     store = new InMemoryProjectionStore<OrderSummaryState>();
-    projector = new Projector(orderProjection, store, (event) => event.data.orderId);
+    projector = new Projector(
+      orderProjection,
+      store,
+      (event) => event.data.orderId
+    );
   });
 
   test('handle processes a single event correctly', async () => {
@@ -332,7 +358,10 @@ describe('Projector', () => {
     test('subscribes to EventBus and handles events', async () => {
       const bus = new EventBus<OrderEvent>();
 
-      const unsubscribe = projector.subscribe(bus, ['OrderPlaced', 'ItemAdded']);
+      const unsubscribe = projector.subscribe(bus, [
+        'OrderPlaced',
+        'ItemAdded',
+      ]);
 
       // Publish events one at a time with waiting to avoid race conditions
       // (In real apps, events typically arrive sequentially over time)
@@ -356,7 +385,10 @@ describe('Projector', () => {
     test('unsubscribe stops handling events', async () => {
       const bus = new EventBus<OrderEvent>();
 
-      const unsubscribe = projector.subscribe(bus, ['OrderPlaced', 'ItemAdded']);
+      const unsubscribe = projector.subscribe(bus, [
+        'OrderPlaced',
+        'ItemAdded',
+      ]);
 
       bus.publish(createOrderPlaced('order-1', 100));
       await new Promise((resolve) => setTimeout(resolve, 10));

@@ -1,5 +1,14 @@
-import { describe, test, expect } from 'vitest';
-import { Engine, InMemoryEventStore, createMeta, ok, err, type Result, type Command, type DomainEvent } from '../src';
+import { describe, expect, test } from 'vitest';
+import {
+  type Command,
+  createMeta,
+  type DomainEvent,
+  Engine,
+  err,
+  InMemoryEventStore,
+  ok,
+  type Result,
+} from '../src';
 
 // Test domain using Plain Object events
 type Incremented = DomainEvent<'Incremented', { amount: number }>;
@@ -35,7 +44,10 @@ const config = {
   reducer: (state: CounterState, event: CounterEvent): CounterState => {
     return { value: state.value + event.data.amount };
   },
-  decider: (command: CounterCommand, state: CounterState): Result<CounterEvent[], NegativeAmountError> => {
+  decider: (
+    command: CounterCommand,
+    _state: CounterState
+  ): Result<CounterEvent[], NegativeAmountError> => {
     if (command.amount <= 0) {
       return err(new NegativeAmountError());
     }
@@ -92,7 +104,10 @@ describe('Engine type inference', () => {
       reducer: (state: CounterState, event: CounterEvent): CounterState => {
         return { value: state.value + event.data.amount };
       },
-      decider: (command: CounterCommand, state: CounterState): Result<CounterEvent[], NegativeAmountError> => {
+      decider: (
+        command: CounterCommand,
+        _state: CounterState
+      ): Result<CounterEvent[], NegativeAmountError> => {
         if (command.amount <= 0) {
           return err(new NegativeAmountError());
         }

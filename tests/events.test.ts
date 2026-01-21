@@ -1,6 +1,6 @@
-import { describe, test, expect } from 'vitest';
-import { createMeta, defineEvent, DomainEventClass } from '../src/lib/events';
+import { describe, expect, test } from 'vitest';
 import type { DomainEvent } from '../src/lib/events';
+import { createMeta, defineEvent } from '../src/lib/events';
 
 describe('createMeta', () => {
   test('generates UUID for id', () => {
@@ -78,68 +78,5 @@ describe('Plain Object DomainEvent', () => {
     expect(event.type).toBe('TestEvent');
     expect(event.data.value).toBe(42);
     expect(event.meta).toBeUndefined();
-  });
-});
-
-describe('DomainEventClass (legacy)', () => {
-  test('creates event with type and data', () => {
-    const event = new DomainEventClass('TestEvent', { message: 'hello' });
-    expect(event.type).toBe('TestEvent');
-    expect(event.data).toEqual({ message: 'hello' });
-    expect(event.detail).toEqual({ message: 'hello' });
-  });
-
-  test('generates UUID for meta.id', () => {
-    const event = new DomainEventClass('Test', {});
-    expect(event.meta.id).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    );
-  });
-
-  test('generates timestamp', () => {
-    const before = new Date();
-    const event = new DomainEventClass('Test', {});
-    const after = new Date();
-    expect(event.meta.timestamp.getTime()).toBeGreaterThanOrEqual(
-      before.getTime()
-    );
-    expect(event.meta.timestamp.getTime()).toBeLessThanOrEqual(after.getTime());
-  });
-
-  test('can be dispatched and received on EventTarget', () => {
-    const target = new EventTarget();
-    const received: string[] = [];
-
-    target.addEventListener('UserCreated', (e) => {
-      const event = e as DomainEventClass<'UserCreated', { name: string }>;
-      received.push(event.data.name);
-    });
-
-    target.dispatchEvent(new DomainEventClass('UserCreated', { name: 'Alice' }));
-    target.dispatchEvent(new DomainEventClass('UserCreated', { name: 'Bob' }));
-
-    expect(received).toEqual(['Alice', 'Bob']);
-  });
-
-  test('accepts custom meta', () => {
-    const customId = 'custom-id-123';
-    const customTime = new Date('2024-01-01');
-    const event = new DomainEventClass(
-      'Test',
-      {},
-      { id: customId, timestamp: customTime }
-    );
-    expect(event.meta.id).toBe(customId);
-    expect(event.meta.timestamp).toBe(customTime);
-  });
-
-  test('satisfies DomainEvent interface', () => {
-    const classEvent = new DomainEventClass('TestEvent', { value: 42 });
-    
-    // Should be assignable to DomainEvent interface
-    const event: DomainEvent<'TestEvent', { value: number }> = classEvent;
-    
-    expect(event.type).toBe('TestEvent');
-    expect(event.data.value).toBe(42);
   });
 });

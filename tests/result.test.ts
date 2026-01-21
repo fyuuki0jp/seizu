@@ -1,5 +1,5 @@
-import { describe, test, expect } from 'vitest';
-import { ok, err, map, flatMap, isOk, isErr } from '../src/lib/result';
+import { describe, expect, test } from 'vitest';
+import { err, flatMap, isErr, isOk, map, ok } from '../src/lib/result';
 
 describe('Result', () => {
   test('ok() creates success result', () => {

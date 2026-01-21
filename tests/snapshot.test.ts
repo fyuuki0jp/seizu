@@ -1,11 +1,11 @@
-import { describe, test, expect, beforeEach } from 'vitest';
-import { createMeta } from '../src/lib/events';
-import type { DomainEvent } from '../src/lib/events';
-import { ok, err } from '../src/lib/result';
-import { InMemoryEventStore } from '../src/core/in-memory-store';
+import { beforeEach, describe, expect, test } from 'vitest';
+import { type AggregateConfig, type Command, Engine } from '../src/core/engine';
 import { InMemorySnapshotStore } from '../src/core/in-memory-snapshot-store';
-import { Engine, type AggregateConfig, type Command } from '../src/core/engine';
+import { InMemoryEventStore } from '../src/core/in-memory-store';
 import type { Snapshot } from '../src/core/snapshot-store';
+import type { DomainEvent } from '../src/lib/events';
+import { createMeta } from '../src/lib/events';
+import { err, ok } from '../src/lib/result';
 
 // Test domain: Simple counter using Plain Object events
 interface CounterState {
@@ -50,7 +50,7 @@ const counterConfig: AggregateConfig<
     }
     return state;
   },
-  decider: (command, state) => {
+  decider: (command, _state) => {
     if (command.type === 'Increment') {
       if (command.amount <= 0) {
         return err(new NegativeAmountError());
@@ -169,7 +169,12 @@ describe('InMemoryEventStore with fromVersion', () => {
 describe('Engine.snapshot()', () => {
   let eventStore: InMemoryEventStore<CounterEvent>;
   let snapshotStore: InMemorySnapshotStore<CounterState>;
-  let engine: Engine<CounterCommand, CounterEvent, CounterState, NegativeAmountError>;
+  let engine: Engine<
+    CounterCommand,
+    CounterEvent,
+    CounterState,
+    NegativeAmountError
+  >;
 
   beforeEach(() => {
     eventStore = new InMemoryEventStore();
@@ -178,21 +183,33 @@ describe('Engine.snapshot()', () => {
   });
 
   test('snapshot saves current state', async () => {
-    await engine.execute({ type: 'Increment', streamId: 'counter-1', amount: 5 });
-    await engine.execute({ type: 'Increment', streamId: 'counter-1', amount: 3 });
+    await engine.execute({
+      type: 'Increment',
+      streamId: 'counter-1',
+      amount: 5,
+    });
+    await engine.execute({
+      type: 'Increment',
+      streamId: 'counter-1',
+      amount: 3,
+    });
 
     await engine.snapshot('counter-1');
 
     const snapshot = await snapshotStore.load('counter-1');
     expect(snapshot).toBeDefined();
-    expect(snapshot!.version).toBe(2);
-    expect(snapshot!.state).toEqual({ value: 8 });
+    expect(snapshot?.version).toBe(2);
+    expect(snapshot?.state).toEqual({ value: 8 });
   });
 
   test('snapshot throws if no snapshotStore configured', async () => {
     const engineWithoutSnapshot = new Engine(eventStore, counterConfig);
 
-    await engine.execute({ type: 'Increment', streamId: 'counter-1', amount: 5 });
+    await engine.execute({
+      type: 'Increment',
+      streamId: 'counter-1',
+      amount: 5,
+    });
 
     await expect(engineWithoutSnapshot.snapshot('counter-1')).rejects.toThrow(
       'No snapshot store configured'
@@ -203,7 +220,12 @@ describe('Engine.snapshot()', () => {
 describe('Engine rehydration with Snapshot', () => {
   let eventStore: InMemoryEventStore<CounterEvent>;
   let snapshotStore: InMemorySnapshotStore<CounterState>;
-  let engine: Engine<CounterCommand, CounterEvent, CounterState, NegativeAmountError>;
+  let engine: Engine<
+    CounterCommand,
+    CounterEvent,
+    CounterState,
+    NegativeAmountError
+  >;
 
   beforeEach(() => {
     eventStore = new InMemoryEventStore();
@@ -213,14 +235,26 @@ describe('Engine rehydration with Snapshot', () => {
 
   test('rehydrates from snapshot and subsequent events', async () => {
     // Execute some commands
-    await engine.execute({ type: 'Increment', streamId: 'counter-1', amount: 5 });
-    await engine.execute({ type: 'Increment', streamId: 'counter-1', amount: 3 });
+    await engine.execute({
+      type: 'Increment',
+      streamId: 'counter-1',
+      amount: 5,
+    });
+    await engine.execute({
+      type: 'Increment',
+      streamId: 'counter-1',
+      amount: 3,
+    });
 
     // Take a snapshot
     await engine.snapshot('counter-1');
 
     // Execute more commands after snapshot
-    await engine.execute({ type: 'Increment', streamId: 'counter-1', amount: 2 });
+    await engine.execute({
+      type: 'Increment',
+      streamId: 'counter-1',
+      amount: 2,
+    });
 
     // State should be correct (5 + 3 + 2 = 10)
     const state = await engine.getState('counter-1');
@@ -229,16 +263,36 @@ describe('Engine rehydration with Snapshot', () => {
 
   test('uses only events after snapshot for rehydration', async () => {
     // Setup: Create 3 events
-    await engine.execute({ type: 'Increment', streamId: 'counter-1', amount: 1 });
-    await engine.execute({ type: 'Increment', streamId: 'counter-1', amount: 2 });
-    await engine.execute({ type: 'Increment', streamId: 'counter-1', amount: 3 });
+    await engine.execute({
+      type: 'Increment',
+      streamId: 'counter-1',
+      amount: 1,
+    });
+    await engine.execute({
+      type: 'Increment',
+      streamId: 'counter-1',
+      amount: 2,
+    });
+    await engine.execute({
+      type: 'Increment',
+      streamId: 'counter-1',
+      amount: 3,
+    });
 
     // Take snapshot at version 3 (state = 6)
     await engine.snapshot('counter-1');
 
     // Add 2 more events
-    await engine.execute({ type: 'Increment', streamId: 'counter-1', amount: 4 });
-    await engine.execute({ type: 'Increment', streamId: 'counter-1', amount: 5 });
+    await engine.execute({
+      type: 'Increment',
+      streamId: 'counter-1',
+      amount: 4,
+    });
+    await engine.execute({
+      type: 'Increment',
+      streamId: 'counter-1',
+      amount: 5,
+    });
 
     // Create a new engine with the same stores to verify rehydration
     const engine2 = new Engine(eventStore, counterConfig, { snapshotStore });
@@ -251,8 +305,16 @@ describe('Engine rehydration with Snapshot', () => {
   test('works without snapshot (backward compatible)', async () => {
     const engineNoSnapshot = new Engine(eventStore, counterConfig);
 
-    await engineNoSnapshot.execute({ type: 'Increment', streamId: 'counter-1', amount: 5 });
-    await engineNoSnapshot.execute({ type: 'Increment', streamId: 'counter-1', amount: 3 });
+    await engineNoSnapshot.execute({
+      type: 'Increment',
+      streamId: 'counter-1',
+      amount: 5,
+    });
+    await engineNoSnapshot.execute({
+      type: 'Increment',
+      streamId: 'counter-1',
+      amount: 3,
+    });
 
     const state = await engineNoSnapshot.getState('counter-1');
     expect(state.value).toBe(8);
@@ -275,19 +337,31 @@ describe('Engine snapshotEvery (auto-snapshot)', () => {
     });
 
     // Execute 2 commands (no snapshot yet)
-    await engine.execute({ type: 'Increment', streamId: 'counter-1', amount: 1 });
-    await engine.execute({ type: 'Increment', streamId: 'counter-1', amount: 2 });
+    await engine.execute({
+      type: 'Increment',
+      streamId: 'counter-1',
+      amount: 1,
+    });
+    await engine.execute({
+      type: 'Increment',
+      streamId: 'counter-1',
+      amount: 2,
+    });
 
     let snapshot = await snapshotStore.load('counter-1');
     expect(snapshot).toBeUndefined();
 
     // Execute 1 more (total 3, triggers snapshot)
-    await engine.execute({ type: 'Increment', streamId: 'counter-1', amount: 3 });
+    await engine.execute({
+      type: 'Increment',
+      streamId: 'counter-1',
+      amount: 3,
+    });
 
     snapshot = await snapshotStore.load('counter-1');
     expect(snapshot).toBeDefined();
-    expect(snapshot!.version).toBe(3);
-    expect(snapshot!.state).toEqual({ value: 6 });
+    expect(snapshot?.version).toBe(3);
+    expect(snapshot?.state).toEqual({ value: 6 });
   });
 
   test('auto-snapshots again after another N events', async () => {
@@ -297,19 +371,35 @@ describe('Engine snapshotEvery (auto-snapshot)', () => {
     });
 
     // Execute 2 commands (triggers first snapshot)
-    await engine.execute({ type: 'Increment', streamId: 'counter-1', amount: 1 });
-    await engine.execute({ type: 'Increment', streamId: 'counter-1', amount: 2 });
+    await engine.execute({
+      type: 'Increment',
+      streamId: 'counter-1',
+      amount: 1,
+    });
+    await engine.execute({
+      type: 'Increment',
+      streamId: 'counter-1',
+      amount: 2,
+    });
 
     let snapshot = await snapshotStore.load('counter-1');
-    expect(snapshot!.version).toBe(2);
+    expect(snapshot?.version).toBe(2);
 
     // Execute 2 more (triggers second snapshot at version 4)
-    await engine.execute({ type: 'Increment', streamId: 'counter-1', amount: 3 });
-    await engine.execute({ type: 'Increment', streamId: 'counter-1', amount: 4 });
+    await engine.execute({
+      type: 'Increment',
+      streamId: 'counter-1',
+      amount: 3,
+    });
+    await engine.execute({
+      type: 'Increment',
+      streamId: 'counter-1',
+      amount: 4,
+    });
 
     snapshot = await snapshotStore.load('counter-1');
-    expect(snapshot!.version).toBe(4);
-    expect(snapshot!.state).toEqual({ value: 10 });
+    expect(snapshot?.version).toBe(4);
+    expect(snapshot?.state).toEqual({ value: 10 });
   });
 
   test('does not auto-snapshot if snapshotEvery is not set', async () => {
@@ -318,9 +408,21 @@ describe('Engine snapshotEvery (auto-snapshot)', () => {
       // snapshotEvery not set
     });
 
-    await engine.execute({ type: 'Increment', streamId: 'counter-1', amount: 1 });
-    await engine.execute({ type: 'Increment', streamId: 'counter-1', amount: 2 });
-    await engine.execute({ type: 'Increment', streamId: 'counter-1', amount: 3 });
+    await engine.execute({
+      type: 'Increment',
+      streamId: 'counter-1',
+      amount: 1,
+    });
+    await engine.execute({
+      type: 'Increment',
+      streamId: 'counter-1',
+      amount: 2,
+    });
+    await engine.execute({
+      type: 'Increment',
+      streamId: 'counter-1',
+      amount: 3,
+    });
 
     const snapshot = await snapshotStore.load('counter-1');
     expect(snapshot).toBeUndefined();

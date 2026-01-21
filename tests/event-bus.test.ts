@@ -1,6 +1,6 @@
-import { describe, test, expect, vi } from 'vitest';
-import { EventBus, createMeta } from '../src';
+import { describe, expect, test } from 'vitest';
 import type { DomainEvent } from '../src';
+import { createMeta, EventBus } from '../src';
 
 // Test events using Plain Object style
 type TestEvent = DomainEvent<'TestEvent', { value: number }>;
@@ -37,7 +37,7 @@ describe('EventBus', () => {
 
   test('type-safe event subscription', () => {
     const bus = new EventBus<AllEvents>();
-    
+
     bus.on('TestEvent', (event) => {
       // event.data should be { value: number }
       const value: number = event.data.value;

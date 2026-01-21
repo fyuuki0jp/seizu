@@ -1,10 +1,10 @@
-import { describe, test, expect, beforeEach } from 'vitest';
-import { createMeta } from '../src/lib/events';
-import type { DomainEvent } from '../src/lib/events';
-import { ok, err } from '../src/lib/result';
-import { InMemoryEventStore } from '../src/core/in-memory-store';
-import { Engine, type AggregateConfig, type Command } from '../src/core/engine';
+import { beforeEach, describe, expect, test } from 'vitest';
+import { type AggregateConfig, type Command, Engine } from '../src/core/engine';
 import { EventBus } from '../src/core/event-bus';
+import { InMemoryEventStore } from '../src/core/in-memory-store';
+import type { DomainEvent } from '../src/lib/events';
+import { createMeta } from '../src/lib/events';
+import { err, ok } from '../src/lib/result';
 
 // Test domain: Simple counter using Plain Object events
 interface CounterState {
@@ -49,7 +49,7 @@ const counterConfig: AggregateConfig<
     }
     return state;
   },
-  decider: (command, state) => {
+  decider: (command, _state) => {
     if (command.type === 'Increment') {
       if (command.amount <= 0) {
         return err(new NegativeAmountError());
@@ -98,7 +98,12 @@ describe('InMemoryEventStore', () => {
 
 describe('Engine', () => {
   let store: InMemoryEventStore<CounterEvent>;
-  let engine: Engine<CounterCommand, CounterEvent, CounterState, NegativeAmountError>;
+  let engine: Engine<
+    CounterCommand,
+    CounterEvent,
+    CounterState,
+    NegativeAmountError
+  >;
 
   beforeEach(() => {
     store = new InMemoryEventStore();
@@ -181,7 +186,12 @@ describe('Engine', () => {
 
 describe('Engine.on (type-safe listener)', () => {
   let store: InMemoryEventStore<CounterEvent>;
-  let engine: Engine<CounterCommand, CounterEvent, CounterState, NegativeAmountError>;
+  let engine: Engine<
+    CounterCommand,
+    CounterEvent,
+    CounterState,
+    NegativeAmountError
+  >;
 
   beforeEach(() => {
     store = new InMemoryEventStore();
@@ -206,9 +216,17 @@ describe('Engine.on (type-safe listener)', () => {
     const unsubscribe = engine.on('Incremented', (event) => {
       received.push(event.data.amount);
     });
-    await engine.execute({ type: 'Increment', streamId: 'counter-1', amount: 1 });
+    await engine.execute({
+      type: 'Increment',
+      streamId: 'counter-1',
+      amount: 1,
+    });
     unsubscribe();
-    await engine.execute({ type: 'Increment', streamId: 'counter-1', amount: 2 });
+    await engine.execute({
+      type: 'Increment',
+      streamId: 'counter-1',
+      amount: 2,
+    });
     expect(received).toEqual([1]);
   });
 });
