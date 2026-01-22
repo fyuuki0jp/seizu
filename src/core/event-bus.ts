@@ -69,10 +69,17 @@ export class EventBus<
     const listener = (e: Event) => {
       // Extract original Plain Object from CustomEvent wrapper
       const customEvent = e as CustomEvent & { originalEvent?: DomainEvent };
-      const event = (customEvent.originalEvent ?? {
-        type: e.type,
-        data: (e as CustomEvent).detail,
-      }) as ToEventMap<TEvent>[K];
+
+      // Fail Fast: originalEvent は wrapAsCustomEvent() により常に設定される不変条件
+      if (!customEvent.originalEvent) {
+        throw new Error(
+          `Event "${e.type}" was dispatched without originalEvent. ` +
+            `This indicates a programming error. Use EventBus.publish() for direct event dispatch,` +
+            ` or Engine.execute() to emit events as a result of command execution.`
+        );
+      }
+
+      const event = customEvent.originalEvent as ToEventMap<TEvent>[K];
 
       // Handle both sync and async handlers with try-catch for sync exceptions
       try {

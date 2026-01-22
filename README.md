@@ -1,6 +1,7 @@
 # RISE - Reactive Immutable State Engine
 
 [![CI](https://github.com/rise-es/rise/actions/workflows/test.yml/badge.svg)](https://github.com/rise-es/rise/actions/workflows/test.yml)
+[![Coverage](https://img.shields.io/badge/coverage-98%25-brightgreen)](./coverage/index.html)
 [![npm version](https://img.shields.io/npm/v/rise.svg)](https://www.npmjs.com/package/rise)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 

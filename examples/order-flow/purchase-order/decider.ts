@@ -26,7 +26,9 @@ export const decider = (
         ),
       ]);
     }
-    default:
-      return ok([]);
+    default: {
+      const _exhaustive: never = command as never;
+      return _exhaustive;
+    }
   }
 };

@@ -76,3 +76,27 @@ Example: `feat: add snapshot interval configuration`
 ## License
 
 By contributing to RISE, you agree that your contributions will be licensed under the MIT License.
+
+## Test Coverage
+
+RISE maintains high test coverage (≥80% for all metrics). 
+
+### Running Coverage Tests
+
+To generate and view coverage reports:
+
+```bash
+pnpm test:coverage
+open coverage/index.html  # macOS
+# or
+xdg-open coverage/index.html  # Linux
+```
+
+### Coverage Requirements
+
+- Lines: ≥80%
+- Functions: ≥80%
+- Branches: ≥80%
+- Statements: ≥80%
+
+If coverage falls below these thresholds, CI will fail. Please add tests to cover new code paths.

@@ -6,6 +6,71 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [0.6.0] - 2026-01-22
+
+### Changed
+- **Engine Refactoring (SRP)**: `execute` method split into 4 private methods
+  - `loadState()`: Load snapshot and events
+  - `persistEvents()`: Add metadata and persist
+  - `dispatchEvents()`: Dispatch to EventTarget + EventBus
+  - `maybeSnapshot()`: Auto-snapshot with conditions
+  - Improved code readability and maintainability
+- **DRY Improvement**: `getState()` now reuses `loadState()` to eliminate duplication
+
+### Added
+- **Test Coverage Enforcement**: 80% coverage thresholds enforced in CI
+  - Configured in `vitest.config.ts` with v8 provider
+  - `pnpm test:coverage` command added
+  - GitHub Actions CI validates coverage on every push/PR
+- **Exhaustiveness Checks**: Added type-level exhaustiveness checks to all example deciders
+  - `examples/order-flow/inventory/decider.ts`
+  - `examples/order-flow/purchase-order/decider.ts`
+  - `examples/order-flow-saga/inventory/decider.ts`
+  - `examples/order-flow-saga/payment/decider.ts`
+- **Example Integration Tests**: New tests for all examples
+  - `tests/examples/counter.test.ts`: Counter increment/decrement scenarios
+  - `tests/examples/cart.test.ts`: Cart creation, item add/remove
+  - `tests/examples/order-flow.test.ts`: Multi-aggregate integration with EventBus
+
+### Fixed
+- Incomplete exhaustiveness check in `examples/order-flow/inventory/decider.ts`
+
+### Documentation
+- README.md for `examples/order-flow-saga/` (already existed, confirmed complete)
+
+### Quality Metrics
+- **Test Count**: 78 → 109 tests (+31)
+- **Test Coverage**: 97.56% (lines), 97.33% (branches), 96.42% (functions)
+- **Code Review**: All phases reviewed and approved by code-reviewer agent
+
+## [0.6.1] - 2026-01-22
+
+### Changed
+- **Fail Fast for Event Dispatch Contract**: Removed defensive fallback when `originalEvent` is missing
+  - `Engine.on()` and `EventBus.on()` now throw Error immediately if `originalEvent` is absent
+  - Previously used fallback `??` operator to create incomplete event objects (missing `meta`)
+  - New behavior detects programming errors (direct `dispatchEvent()` calls) instantly
+  - Added `WrappedCustomEvent<E>` type to enforce contract at type level
+
+### Added
+- `WrappedCustomEvent<E>` type exported from `lib/events.ts`
+- New documentation: `docs/DEFENSIVE_CODING.md` - Defensive Coding Policy guide
+- Event Dispatch Contract section in `AGENTS.md`
+- Tests for `originalEvent` missing scenario in `tests/engine.test.ts` and `tests/event-bus.test.ts`
+
+### Fixed
+- Over-validation issue where fallback logic hid programming errors
+
+### Documentation
+- Codified "Validate at Boundaries, Trust Internally" principle
+- Explained Fail Fast vs Result<T, E> usage patterns
+- Documented invariants and contracts for internal APIs
+
+### Breaking Changes
+- **None for valid API usage**: Only affects invalid usage (direct `dispatchEvent()` without `originalEvent`)
+- Users must use `Engine.execute()` or `EventBus.publish()` to dispatch events (as intended)
+
+
 
 ## [0.5.0] - 2026-01-21
 

@@ -35,6 +35,7 @@ export {
   type EventType,
   type IdGenerator,
   type ToEventMap,
+  type WrappedCustomEvent,
 } from './lib/events';
 export { defineProjection } from './lib/projections';
 export { err, flatMap, isErr, isOk, map, ok, type Result } from './lib/result';

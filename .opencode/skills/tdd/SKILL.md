@@ -1,267 +1,195 @@
 ---
-name: tdd
-description: Detroit-style BDD開発フロー。シナリオテストをメインに据え、振る舞い駆動でテストを設計する。
+name: tdd-bdd-typescript
+description: TypeScriptにおけるTDD（テスト駆動開発）とBDD（振る舞い駆動開発）のスキル。Given-When-Thenスタイルでテストを記述し、Red-Green-Refactorサイクルで開発を進める。新規コード開発、レガシーコード改善、テストファースト開発、リファクタリング時に適用。Vitest/Jest環境でのTypeScript開発に最適化。
 ---
 
-# TDD スキル (Detroit-style BDD)
+# TDD/BDD TypeScript開発スキル
 
-振る舞い駆動開発（BDD）をデトロイト派アプローチで実践するスキル。
-シナリオテストを主軸に、ユースケースの振る舞いをGiven-When-Then形式で記述する。
+t-wadaの「実録レガシーコード改善」の知見に基づく、TypeScriptでのテスト駆動開発ガイド。
 
-## 開発サイクル
+## 核心原則
+
+> 「テストのないコードは悪いコードである。どれだけうまく書かれているかは関係ない」
+> — Michael Feathers『レガシーコード改善ガイド』
+
+### TDDの3ステップサイクル
 
 ```
-Plan → Skeleton → Red → Green → Integrate
+1. Red   → 失敗するテストを1つ書く
+2. Green → そのテストを最小限のコードで成功させる
+3. Refactor → テストが通る状態を維持してリファクタリング
 ```
 
-| Phase | Agent | 担うもの |
-|-------|-------|----------|
-| Skeleton | `skeleton` | 型・シグネチャ・intent（why） |
-| Red | `red` | シナリオテスト（what） |
-| Green | `green` | 実装 |
+## Given-When-Then（BDDスタイル）
 
-## Detroit School BDD 原則
-
-### 1. 振る舞い中心
-
-内部実装ではなく、外部から見える振る舞いをテストする。
-「この関数は何をするか」ではなく「ユーザー/システムは何を達成できるか」を記述。
-
-### 2. 実オブジェクト協調
-
-モックは外部依存（DB、外部API）のみに限定。
-ドメインロジックは実オブジェクトを協調させてテストする。
+テストを「仕様」として読めるように構造化する。
 
 ```typescript
-// Good: 実オブジェクト協調
-const state = replay(events, applyTodoEventToAggregate);
-const result = decideTodo(state, command, meta);
+describe('注文処理', () => {
+  describe('在庫が十分にある場合', () => {
+    it('注文が作成されること', () => {
+      // Given: 事前条件
+      const product = createProduct({ stock: 10 });
+      const order = { productId: product.id, quantity: 3 };
 
-// Avoid: 過度なモック
-const mockState = { ...mocked };
-const mockDecide = vi.fn().mockReturnValue(...);
-```
+      // When: テスト対象の操作
+      const result = createOrder(order);
 
-### 3. ユビキタス言語
-
-ドメイン用語でテストを記述する。
-テストは仕様書としても機能する。
-
-```typescript
-// Good: ドメイン言語
-describe("Scenario: Todoを完了にする", () => {});
-
-// Avoid: 技術的な記述
-describe("decideTodo returns TodoCompleted event", () => {});
-```
-
-### 4. Given-When-Then
-
-自然言語に近いシナリオ構造で記述。
-
-```typescript
-describe("Scenario: Todoを完了にする", () => {
-  // Given: 前提条件
-  // When: アクション
-  // Then: 期待する結果
-});
-```
-
-## テスト階層
-
-| 層 | 目的 | ファイル形式 | 優先度 |
-|----|------|--------------|--------|
-| **Scenario** | ユースケースの振る舞い | `*.scenario.test.ts` | 主 |
-| **Unit** | 純粋関数の境界値・エッジケース | `*.test.ts` | 従 |
-| **Integration** | 外部依存を含む結合 | `*.integration.test.ts` | 必要時 |
-
-### ファイル配置
-
-```
-src/features/{feature}/
-├── __tests__/
-│   ├── {feature}.scenario.test.ts  ← シナリオテスト（メイン）
-│   └── {feature}.test.ts           ← 単体テスト（必要時）
-└── model/
-    └── decide.ts                    ← ビジネスロジックのみ
-```
-
-**in-source testingは使用しない**: テストとプロダクションコードを分離し、関心の分離を明確にする。
-
-## ES-lite での Given-When-Then パターン
-
-CQRS + Event Sourcing アーキテクチャでのシナリオテストパターン。
-
-### 基本構造
-
-```typescript
-import { replay } from "@/shared/lib/test/scenario";
-import { testMeta, eventHistory } from "@/shared/lib/test/builders";
-import { decideTodo } from "@/entities/todo/model/decide";
-import { applyTodoEventToAggregate } from "@/entities/todo/model/evolve";
-
-describe("Feature: Todo管理", () => {
-  describe("Scenario: Todoを完了にする", () => {
-    // Given: 過去のイベントで状態を構築
-    const events = eventHistory()
-      .created({ title: "買い物に行く" })
-      .build();
-    const state = replay(events, applyTodoEventToAggregate);
-    const meta = testMeta({ aggregateId: state!.id, version: state!.version + 1 });
-
-    // When: コマンドを実行
-    const result = decideTodo(
-      state,
-      { type: "CompleteTodo", aggregateId: state!.id, expectedVersion: state!.version },
-      meta
-    );
-
-    // Then: 期待するイベントが発生
-    it("TodoCompletedイベントが発生する", () => {
+      // Then: 期待される結果
       expect(result.isOk()).toBe(true);
-      expect(result.value).toHaveLength(1);
-      expect(result.value![0].type).toBe("TodoCompleted");
-    });
-
-    it("完了時刻が記録される", () => {
-      expect(result.value![0].data.completedAt).toBe(meta.timestamp);
-    });
-  });
-
-  describe("Scenario: 削除済みTodoは更新できない", () => {
-    // Given: 削除済みのTodo
-    const events = eventHistory()
-      .created({ title: "古いTodo" })
-      .thenDeleted()
-      .build();
-    const state = replay(events, applyTodoEventToAggregate);
-    const meta = testMeta({ aggregateId: state!.id, version: state!.version + 1 });
-
-    // When: 更新を試みる
-    const result = decideTodo(
-      state,
-      { type: "UpdateTodo", aggregateId: state!.id, title: "新しいタイトル", expectedVersion: state!.version },
-      meta
-    );
-
-    // Then: エラーが返される
-    it("削除済みエラーが返される", () => {
-      expect(result.isErr()).toBe(true);
-      expect(result.error?.message).toContain("削除済み");
+      expect(result.value.quantity).toBe(3);
     });
   });
 });
 ```
 
-### シナリオテストのポイント
+### Given-When-Thenの責務
 
-1. **Given**: `eventHistory()` と `replay()` で状態を構築
-2. **When**: コマンド実行（`decideTodo`等）
-3. **Then**: イベント発生または状態変化を検証
+| フェーズ | 責務 | 注意点 |
+|---------|------|--------|
+| Given | 事前状態の構築 | テストに必要な最小限のセットアップ |
+| When | テスト対象の操作（1つだけ） | 副作用を伴う操作は1回のみ |
+| Then | 結果の検証 | 1テスト1アサーションが理想 |
 
-### 状態遷移の検証
+## TDD開発ワークフロー
 
-イベント適用後の状態を検証する場合：
+### フェーズ1: TODOリストの作成
+
+実装前に「何をテストするか」をリストアップする。
 
 ```typescript
-describe("Scenario: Todo完了後の状態", () => {
-  const events = eventHistory()
-    .created({ title: "タスク" })
-    .thenCompleted()
-    .build();
-  const state = replay(events, applyTodoEventToAggregate);
+// TODO: 注文機能
+// - [ ] 正常系: 在庫十分で注文作成成功
+// - [ ] 異常系: 在庫不足でエラー
+// - [ ] 異常系: 数量0以下でエラー
+// - [ ] 境界値: 在庫ちょうどで注文成功
+```
 
-  it("isCompletedがtrueになる", () => {
-    expect(state?.isCompleted).toBe(true);
-  });
+### フェーズ2: Red（失敗するテストを書く）
 
-  it("statusがdoneになる", () => {
-    expect(state?.status).toBe("done");
+```typescript
+describe('createOrder', () => {
+  it('在庫が十分にある場合、注文が作成される', () => {
+    // Given
+    const getStock = () => 10;  // 接合部: ランダム性/外部依存を制御
+    const orderService = createOrderService({ getStock });
+
+    // When
+    const result = orderService.create({ productId: 'p1', quantity: 3 });
+
+    // Then
+    expect(result.isOk()).toBe(true);
   });
 });
 ```
 
-## ペアワイズ法
+### フェーズ3: Green（最小限の実装）
 
-テストケースの組み合わせ爆発を防ぎつつ網羅性を確保。
-**シナリオテストのパラメータ組み合わせ**に適用する。
+テストを通すための最小限のコードを書く。完璧を目指さない。
 
-### 使い方
-
-```bash
-npx tsx .claude/skills/tdd/scripts/generate-pairwise.ts config.json
-```
-
-### 設定ファイル例
-
-```json
-{
-  "parameters": {
-    "todoStatus": ["todo", "in_progress", "done"],
-    "action": ["complete", "delete", "update"],
-    "isDeleted": [false, true]
-  },
-  "boundaries": {
-    "expectedVersion": [0, -1, 999]
-  }
+```typescript
+function createOrderService({ getStock }: Dependencies) {
+  return {
+    create(input: OrderInput): Result<Order, OrderError> {
+      const stock = getStock(input.productId);
+      if (stock < input.quantity) {
+        return err({ type: 'INSUFFICIENT_STOCK' });
+      }
+      return ok({ id: generateId(), ...input });
+    }
+  };
 }
 ```
 
-### 出力
+### フェーズ4: Refactor
 
-```json
-{
-  "stats": {
-    "totalCases": 12,
-    "fullCombinations": 18,
-    "reduction": "33.3%"
-  },
-  "testCases": [
-    { "id": 1, "params": { "todoStatus": "todo", "action": "complete", "isDeleted": false }, "isBoundary": false },
-    ...
-  ]
+テストが緑のまま、コードを改善する。
+
+## 接合部（Seam）パターン
+
+### なぜ接合部が重要か
+
+> 「コードを変更するためにはテストを整備する必要がある。
+> 多くの場合、テストを整備するためには、コードを変更する必要がある」
+> — レガシーコードのジレンマ
+
+接合部とは、コードを直接編集せずに振る舞いを変えられる場所。
+
+### Humble Object Pattern
+
+テスト困難な要素を薄く切り出し、テスト可能範囲を最大化する。
+
+```typescript
+// Before: テスト困難（ランダム性が内部に埋め込まれている）
+function selectQuestion(questions: Question[]): Question {
+  const index = Math.floor(Math.random() * questions.length);
+  return questions[index];
 }
+
+// After: テスト容易（ランダム性を接合部として分離）
+function createQuestionSelector(getNextIndex: () => number) {
+  return function selectQuestion(questions: Question[]): Question {
+    const index = getNextIndex();
+    return questions[index];
+  };
+}
+
+// 本番コード
+const selectQuestion = createQuestionSelector(
+  () => Math.floor(Math.random() * questions.length)
+);
+
+// テストコード
+const selectQuestion = createQuestionSelector(() => 4); // 決定的
 ```
 
-## テスト設計の原則
+### 接合部の種類と対処法
 
-1. **シナリオ優先**: ユースケースをシナリオとしてテスト
-2. **ペアワイズ**: パラメータ組み合わせはペアワイズ法で削減
-3. **境界値**: 各パラメータの境界値は必ずテスト
-4. **Intent → Test**: skeletonのintent commentsから直接テストケースを導出
+| 種類 | 例 | 対処法 |
+|------|-----|--------|
+| ランダム性 | Math.random(), UUID | 生成関数を引数で注入 |
+| 時間依存 | new Date(), Date.now() | 時刻取得関数を注入 |
+| 外部API | fetch, DB接続 | インターフェースで抽象化 |
+| 環境変数 | process.env | Config オブジェクトで注入 |
 
-## テストヘルパー
+## テストの決定性
 
-### replay
-
-イベント配列から状態を再構築：
+テストは何度実行しても同じ結果を返すべき。
 
 ```typescript
-import { replay } from "@/shared/lib/test/scenario";
+// NG: 非決定的
+it('ランダムな質問が選ばれる', () => {
+  const question = selectRandomQuestion(questions);
+  expect(questions).toContain(question); // 検証が弱い
+});
 
-const state = replay(events, applyTodoEventToAggregate);
+// OK: 決定的
+it('指定されたインデックスの質問が選ばれる', () => {
+  const getIndex = () => 2;
+  const selectQuestion = createQuestionSelector(getIndex);
+  
+  const question = selectQuestion(questions);
+  
+  expect(question).toBe(questions[2]);
+});
 ```
 
-### eventHistory
-
-イベント履歴を流暢に構築：
+## テストダブル使い分け
 
 ```typescript
-import { eventHistory } from "@/shared/lib/test/builders";
+// Stub: 固定値を返す
+const getStock = vi.fn().mockReturnValue(10);
 
-const events = eventHistory()
-  .created({ title: "タスク" })
-  .thenUpdated({ title: "更新後" })
-  .thenCompleted()
-  .build();
+// Spy: 呼び出しを記録
+const logger = { log: vi.fn() };
+expect(logger.log).toHaveBeenCalledWith('注文作成');
+
+// Fake: 簡易実装
+const fakeRepository = new Map<string, Order>();
 ```
 
-### testMeta
+## 詳細リファレンス
 
-テスト用メタデータを生成：
-
-```typescript
-import { testMeta } from "@/shared/lib/test/builders";
-
-const meta = testMeta({ aggregateId: "todo-1", version: 2 });
-```
+- TDDサイクルの詳細フロー: [references/tdd-workflow.md](references/tdd-workflow.md)
+- Given-When-Thenパターン集: [references/gherkin-patterns.md](references/gherkin-patterns.md)
+- レガシーコード改善手法: [references/legacy-code.md](references/legacy-code.md)

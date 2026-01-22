@@ -7,7 +7,7 @@ import type {
 import { ensureMeta, wrapAsCustomEvent } from '../lib/events';
 import type { Result } from '../lib/result';
 import type { EventStore } from './event-store';
-import type { SnapshotStore } from './snapshot-store';
+import type { Snapshot, SnapshotStore } from './snapshot-store';
 
 /**
  * Configuration for an aggregate (domain entity)
@@ -105,77 +105,106 @@ export class Engine<
    * @returns Result with new events on success, or error on failure
    */
   async execute(command: TCommand): Promise<Result<TEvent[], TError>> {
-    const snapshotData = this.snapshotStore
-      ? await this.snapshotStore.load(command.streamId)
-      : undefined;
-    const fromVersion = snapshotData?.version ?? 0;
-    const initialState = snapshotData?.state ?? this.config.initialState;
-
-    const existingEvents = await this.eventStore.readStream(
-      command.streamId,
-      fromVersion
+    const { state, totalVersion, snapshotData } = await this.loadState(
+      command.streamId
     );
-    const totalVersion = fromVersion + existingEvents.length;
-
-    const state = existingEvents.reduce(this.config.reducer, initialState);
 
     const decision = this.config.decider(command, state);
     if (!decision.ok) {
       return decision;
     }
 
-    const newEvents = decision.value;
-    const eventsWithMeta = newEvents.map((event) =>
-      ensureMeta(event, this.idGenerator)
-    );
-
-    await this.eventStore.appendToStream(
+    const eventsWithMeta = await this.persistEvents(
       command.streamId,
-      eventsWithMeta,
+      decision.value,
       totalVersion
     );
 
-    for (const eventWithMeta of eventsWithMeta) {
-      const customEvent = wrapAsCustomEvent(eventWithMeta);
-      this.dispatchEvent(customEvent);
+    this.dispatchEvents(eventsWithMeta);
 
-      if (this.bus) {
-        const result = this.bus.publish(eventWithMeta);
-        if (result instanceof Promise) {
-          result.catch((error) => {
-            this.onPublishError?.(error, eventWithMeta);
-          });
-        }
-      }
-    }
-
-    // Auto-snapshot if configured
-    if (this.snapshotStore && this.snapshotEvery) {
-      const newTotalVersion = totalVersion + newEvents.length;
-      const lastSnapshotVersion = snapshotData?.version ?? 0;
-      const eventsSinceSnapshot = newTotalVersion - lastSnapshotVersion;
-
-      if (eventsSinceSnapshot >= this.snapshotEvery) {
-        await this.snapshot(command.streamId);
-      }
-    }
+    await this.maybeSnapshot(
+      command.streamId,
+      totalVersion + eventsWithMeta.length,
+      snapshotData?.version ?? 0
+    );
 
     return { ok: true, value: eventsWithMeta };
   }
 
-  /**
-   * Get current state for a stream (for queries/debugging)
-   */
-  async getState(streamId: string): Promise<TState> {
-    // Use snapshot if available
+  private async loadState(streamId: string): Promise<{
+    state: TState;
+    totalVersion: number;
+    snapshotData?: Snapshot<TState>;
+  }> {
     const snapshotData = this.snapshotStore
       ? await this.snapshotStore.load(streamId)
       : undefined;
     const fromVersion = snapshotData?.version ?? 0;
     const initialState = snapshotData?.state ?? this.config.initialState;
 
-    const events = await this.eventStore.readStream(streamId, fromVersion);
-    return events.reduce(this.config.reducer, initialState);
+    const existingEvents = await this.eventStore.readStream(
+      streamId,
+      fromVersion
+    );
+    const totalVersion = fromVersion + existingEvents.length;
+    const state = existingEvents.reduce(this.config.reducer, initialState);
+
+    return { state, totalVersion, snapshotData };
+  }
+
+  private async persistEvents(
+    streamId: string,
+    newEvents: TEvent[],
+    expectedVersion: number
+  ): Promise<TEvent[]> {
+    const eventsWithMeta = newEvents.map((event) =>
+      ensureMeta(event, this.idGenerator)
+    );
+    await this.eventStore.appendToStream(
+      streamId,
+      eventsWithMeta,
+      expectedVersion
+    );
+    return eventsWithMeta;
+  }
+
+  private dispatchEvents(events: TEvent[]): void {
+    for (const event of events) {
+      const customEvent = wrapAsCustomEvent(event);
+      this.dispatchEvent(customEvent);
+
+      if (this.bus) {
+        const result = this.bus.publish(event);
+        if (result instanceof Promise) {
+          result.catch((error) => {
+            this.onPublishError?.(error, event);
+          });
+        }
+      }
+    }
+  }
+
+  private async maybeSnapshot(
+    streamId: string,
+    currentVersion: number,
+    lastSnapshotVersion: number
+  ): Promise<void> {
+    if (!this.snapshotStore || !this.snapshotEvery) {
+      return;
+    }
+
+    const eventsSinceSnapshot = currentVersion - lastSnapshotVersion;
+    if (eventsSinceSnapshot >= this.snapshotEvery) {
+      await this.snapshot(streamId);
+    }
+  }
+
+  /**
+   * Get current state for a stream (for queries/debugging)
+   */
+  async getState(streamId: string): Promise<TState> {
+    const { state } = await this.loadState(streamId);
+    return state;
   }
 
   /**
@@ -224,11 +253,17 @@ export class Engine<
     const listener = (e: Event) => {
       // Extract original Plain Object from CustomEvent wrapper
       const customEvent = e as CustomEvent & { originalEvent?: DomainEvent };
-      const event = customEvent.originalEvent ?? {
-        type: e.type,
-        data: (e as CustomEvent).detail,
-      };
-      handler(event as ToEventMap<TEvent>[K]);
+
+      // Fail Fast: originalEvent は wrapAsCustomEvent() により常に設定される不変条件
+      if (!customEvent.originalEvent) {
+        throw new Error(
+          `Event "${e.type}" was dispatched without originalEvent. ` +
+            `This indicates a programming error. Use EventBus.publish() for direct event dispatch,` +
+            ` or Engine.execute() to emit events as a result of command execution.`
+        );
+      }
+
+      handler(customEvent.originalEvent as ToEventMap<TEvent>[K]);
     };
     this.addEventListener(type, listener);
     return () => this.removeEventListener(type, listener);

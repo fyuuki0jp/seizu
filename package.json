@@ -1,6 +1,6 @@
 {
   "name": "rise",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Lightweight Event Sourcing framework for building durable Core layers in TypeScript",
   "keywords": [
     "event-sourcing",
@@ -43,6 +43,8 @@
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:coverage:watch": "vitest --coverage",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
@@ -57,6 +59,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.3.11",
     "@types/node": "^25.0.9",
+    "@vitest/coverage-v8": "^4.0.17",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "tsup": "^8.5.1",

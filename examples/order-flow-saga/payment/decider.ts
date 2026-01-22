@@ -27,7 +27,9 @@ export const decider = (
 
       return ok([createPaymentProcessed(command.orderId, command.amount)]);
     }
-    default:
-      return ok([]);
+    default: {
+      const _exhaustive: never = command as never;
+      return _exhaustive;
+    }
   }
 };

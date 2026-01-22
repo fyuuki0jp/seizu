@@ -186,3 +186,78 @@ src/
 3. **Explicit Errors** - Use Result types, not exceptions
 4. **Plain Objects First** - Prefer simple data structures over classes
 5. **Type Safety** - Leverage TypeScript's type system fully
+
+## Event Dispatch Contract
+
+### Invariant: originalEvent プロパティの保証
+
+RISE の内部実装では、`EventTarget` API を使用したイベント dispatch において、以下の不変条件 (invariant) を保証しています：
+
+**不変条件**: `wrapAsCustomEvent()` 関数は **常に** `originalEvent` プロパティを CustomEvent に設定する
+
+```typescript
+export const wrapAsCustomEvent = <E extends DomainEvent>(
+  event: E
+): WrappedCustomEvent<E> => {
+  const ce = new CustomEvent(event.type, { detail: event.data }) as WrappedCustomEvent<E>;
+  ce.originalEvent = event; // ✅ 必ず設定される
+  return ce;
+};
+```
+
+### Fail Fast アプローチ
+
+`Engine.on()` および `EventBus.on()` では、この不変条件が守られていることを前提としており、違反時には即座に Error をスローします：
+
+```typescript
+const listener = (e: Event) => {
+  const customEvent = e as CustomEvent & { originalEvent?: DomainEvent };
+  
+  // Fail Fast: originalEvent は不変条件、欠損はプログラミングエラー
+  if (!customEvent.originalEvent) {
+    throw new Error(
+      `Event "${e.type}" was dispatched without originalEvent. ` +
+      `This indicates a programming error. Use Engine.execute() to dispatch events.`
+    );
+  }
+  
+  handler(customEvent.originalEvent as ToEventMap<TEvent>[K]);
+};
+```
+
+### ユーザーへの契約
+
+ユーザーは以下のルールを守る必要があります：
+
+1. **イベントの dispatch は公開 API を使用する**:
+   - `Engine.execute(command)` または `EventBus.publish(event)` を使用
+   - **直接 `dispatchEvent()` を呼び出さない**
+
+2. **契約違反時の動作**:
+   - `originalEvent` が欠損している場合、即座に Error がスローされる
+   - エラーメッセージでプログラミングエラーであることを明示
+
+### 設計判断の理由
+
+**なぜフォールバックを削除したか**:
+
+以前のコードでは、`originalEvent` が欠損した場合にフォールバックで代替オブジェクトを作成していました：
+
+```typescript
+const event = customEvent.originalEvent ?? {
+  type: e.type,
+  data: (e as CustomEvent).detail,
+}; // ❌ Over-Validation
+```
+
+**問題点**:
+- フォールバックで作成されるオブジェクトは `meta` フィールドが欠損（不完全）
+- バグを隠蔽し、問題の発見を遅らせる
+- `originalEvent` は内部実装の不変条件であり、欠損は開発者のミス
+
+**新しいアプローチ (Fail Fast)**:
+- 不変条件違反を即座に検出
+- 明確なエラーメッセージで問題箇所を特定
+- 型レベルでの保証 (`WrappedCustomEvent` 型)
+
+詳細は [`docs/DEFENSIVE_CODING.md`](./docs/DEFENSIVE_CODING.md) を参照してください。
