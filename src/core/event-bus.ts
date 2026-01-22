@@ -74,7 +74,8 @@ export class EventBus<
       if (!customEvent.originalEvent) {
         throw new Error(
           `Event "${e.type}" was dispatched without originalEvent. ` +
-            `This indicates a programming error. Use EventBus.publish() to dispatch events.`
+            `This indicates a programming error. Use EventBus.publish() for direct event dispatch,` +
+            ` or Engine.execute() to emit events as a result of command execution.`
         );
       }
 
