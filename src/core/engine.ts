@@ -224,11 +224,16 @@ export class Engine<
     const listener = (e: Event) => {
       // Extract original Plain Object from CustomEvent wrapper
       const customEvent = e as CustomEvent & { originalEvent?: DomainEvent };
-      const event = customEvent.originalEvent ?? {
-        type: e.type,
-        data: (e as CustomEvent).detail,
-      };
-      handler(event as ToEventMap<TEvent>[K]);
+
+      // Fail Fast: originalEvent は wrapAsCustomEvent() により常に設定される不変条件
+      if (!customEvent.originalEvent) {
+        throw new Error(
+          `Event "${e.type}" was dispatched without originalEvent. ` +
+            `This indicates a programming error. Use Engine.execute() to dispatch events.`
+        );
+      }
+
+      handler(customEvent.originalEvent as ToEventMap<TEvent>[K]);
     };
     this.addEventListener(type, listener);
     return () => this.removeEventListener(type, listener);

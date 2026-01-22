@@ -34,6 +34,16 @@ export interface DomainEvent<TType extends string = string, TData = unknown> {
 }
 
 /**
+ * CustomEvent wrapper with originalEvent property
+ * This type represents the contract between wrapAsCustomEvent() and event listeners
+ */
+export type WrappedCustomEvent<E extends DomainEvent> = CustomEvent<
+  E['data']
+> & {
+  originalEvent: E;
+};
+
+/**
  * イベント Union 型から EventMap を自動生成
  *
  * @example
@@ -65,13 +75,18 @@ export const createMeta = (
   ...partial,
 });
 
-/** Wrap Plain Object event as CustomEvent for EventTarget */
+/**
+ * Wrap Plain Object event as CustomEvent for EventTarget
+ *
+ * INVARIANT: This function ALWAYS sets the originalEvent property.
+ * Event listeners (Engine.on(), EventBus.on()) depend on this contract.
+ */
 export const wrapAsCustomEvent = <E extends DomainEvent>(
   event: E
-): CustomEvent<E['data']> & { originalEvent: E } => {
-  const ce = new CustomEvent(event.type, { detail: event.data }) as CustomEvent<
-    E['data']
-  > & { originalEvent: E };
+): WrappedCustomEvent<E> => {
+  const ce = new CustomEvent(event.type, {
+    detail: event.data,
+  }) as WrappedCustomEvent<E>;
   ce.originalEvent = event;
   return ce;
 };

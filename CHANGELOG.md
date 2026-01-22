@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [0.6.1] - 2026-01-22
+
+### Changed
+- **Fail Fast for Event Dispatch Contract**: Removed defensive fallback when `originalEvent` is missing
+  - `Engine.on()` and `EventBus.on()` now throw Error immediately if `originalEvent` is absent
+  - Previously used fallback `??` operator to create incomplete event objects (missing `meta`)
+  - New behavior detects programming errors (direct `dispatchEvent()` calls) instantly
+  - Added `WrappedCustomEvent<E>` type to enforce contract at type level
+
+### Added
+- `WrappedCustomEvent<E>` type exported from `lib/events.ts`
+- New documentation: `docs/DEFENSIVE_CODING.md` - Defensive Coding Policy guide
+- Event Dispatch Contract section in `AGENTS.md`
+- Tests for `originalEvent` missing scenario in `tests/engine.test.ts` and `tests/event-bus.test.ts`
+
+### Fixed
+- Over-validation issue where fallback logic hid programming errors
+
+### Documentation
+- Codified "Validate at Boundaries, Trust Internally" principle
+- Explained Fail Fast vs Result<T, E> usage patterns
+- Documented invariants and contracts for internal APIs
+
+### Breaking Changes
+- **None for valid API usage**: Only affects invalid usage (direct `dispatchEvent()` without `originalEvent`)
+- Users must use `Engine.execute()` or `EventBus.publish()` to dispatch events (as intended)
+
+
 
 ## [0.5.0] - 2026-01-21
 

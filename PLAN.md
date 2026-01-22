@@ -2204,3 +2204,382 @@ git checkout HEAD~1 -- src/core/engine.ts
 - engine.ts の execute 関数分割 (SRP適用) - 現在のカバレッジが98%と高いためスキップ
 - order-flow 統合テスト - 必要に応じて追加
 
+
+---
+
+# v0.6.1 Defensive Coding Policy 明確化計画
+
+## Purpose / Big Picture
+
+**ユーザーが得るもの:**
+1. **明確な検証方針**: どこで検証し、どこで信頼するかが明文化される
+2. **Fail Fast の徹底**: `originalEvent` 欠損時に即座にエラーを検出
+3. **保守性向上**: 防御的コーディングの一貫した方針により、将来の開発が容易に
+
+**背景:**
+- Code Reviewerが `originalEvent` フォールバックを Over-Validation として指摘
+- ユーザーの洞察「境界で検証、内部では信頼」がclean-code原則と合致
+- 現在のコードベースは全体的に高品質だが、設計意図の明文化が不足
+
+**確認方法:**
+- `pnpm test` が全て通る
+- `originalEvent` 欠損時に明確なエラーメッセージが表示される
+- `docs/DEFENSIVE_CODING.md` が追加され、方針が明文化される
+
+---
+
+## Progress
+
+### Milestone 1: 設計方針決定 [COMPLETED]
+- [x] (2026-01-22) Code Reviewer による分析完了
+- [x] (2026-01-22) Plan Reviewer による評価完了
+- [x] (2026-01-22) Defensive Coding Policy 設計完了
+
+**決定事項:**
+- `originalEvent` フォールバックは **内部実装の不変条件** として扱う
+- Fail Fast アプローチを採用（フォールバック削除、assertion追加）
+- Defensive Coding Policy を `docs/DEFENSIVE_CODING.md` として文書化
+
+### Milestone 2: コード修正 [PENDING]
+- [ ] 2.1 `engine.ts` の `originalEvent` assertion 追加
+- [ ] 2.2 `event-bus.ts` の `originalEvent` assertion 追加
+- [ ] 2.3 型定義強化（`WrappedCustomEvent` interface）
+
+### Milestone 3: ドキュメント整備 [PENDING]
+- [ ] 3.1 `docs/DEFENSIVE_CODING.md` 作成
+- [ ] 3.2 `AGENTS.md` に Event Dispatch Contract 追加
+- [ ] 3.3 `CHANGELOG.md` に v0.6.1 エントリ追加
+
+### Milestone 4: テスト追加 [PENDING]
+- [ ] 4.1 `originalEvent` 欠損時のエラーテスト（Engine）
+- [ ] 4.2 `originalEvent` 欠損時のエラーテスト（EventBus）
+
+### Milestone 5: 検証・完了 [PENDING]
+- [ ] 5.1 全テスト実行・カバレッジ確認
+- [ ] 5.2 lint/build 確認
+- [ ] 5.3 PLAN.md 更新
+
+---
+
+## Context and Orientation
+
+### 変更対象ファイル
+
+| ファイル | 変更内容 | 影響 |
+|----------|---------|------|
+| `src/core/engine.ts` | L227-230: フォールバック削除、assertion追加 | Minor |
+| `src/core/event-bus.ts` | L72-75: フォールバック削除、assertion追加 | Minor |
+| `src/lib/events.ts` | `WrappedCustomEvent` interface追加 | None（型のみ） |
+| `docs/DEFENSIVE_CODING.md` | 新規作成 | None |
+| `AGENTS.md` | Event Dispatch Contract 追加 | None |
+| `tests/engine.test.ts` | assertion テスト追加 | None |
+| `tests/event-bus.test.ts` | assertion テスト追加 | None |
+
+### 設計方針の整理
+
+#### 検証戦略（3層アーキテクチャ）
+
+| レイヤー | 検証ルール | 例 |
+|----------|-----------|-----|
+| **Public API（境界）** | 完全な検証、明確なエラーメッセージ | `execute()`, `publish()`, `snapshot()` |
+| **Internal（内部）** | caller を信頼、assertion のみ | `wrapAsCustomEvent()`, `ensureMeta()` |
+| **Optional Features** | Guard clause + デフォルト値 | `snapshotStore ? ... : undefined` |
+
+#### エラーハンドリング戦略
+
+| シナリオ | 戦略 | 実装方法 |
+|----------|------|---------|
+| **不変条件違反** | Fail Fast (throw Error) | `originalEvent` 欠損時 |
+| **ビジネスルール違反** | Result<T, E> 返却 | Decider での検証 |
+| **オプショナル欠落** | `??` または `?` | Snapshot機能 |
+
+---
+
+## Decision Log
+
+| 日付 | 決定 | 理由 |
+|------|------|------|
+| 2026-01-22 | `originalEvent` フォールバック削除 | 不変条件であり、フォールバックは問題を隠蔽する |
+| 2026-01-22 | Fail Fast アプローチ採用 | clean-code原則に合致、バグの早期発見 |
+| 2026-01-22 | v0.6.1 としてリリース | 破壊的変更ではないが、挙動変更のためパッチバージョン |
+| 2026-01-22 | Defensive Coding Policy 文書化 | 将来の開発者のためのガイドライン |
+
+---
+
+## Plan of Work
+
+### Milestone 2: コード修正
+
+#### Step 2.1: engine.ts の originalEvent assertion 追加
+
+**ファイル**: `src/core/engine.ts` L224-232
+
+**変更内容**:
+```typescript
+// BEFORE
+const listener = (e: Event) => {
+  const customEvent = e as CustomEvent & { originalEvent?: DomainEvent };
+  const event = customEvent.originalEvent ?? {
+    type: e.type,
+    data: (e as CustomEvent).detail,
+  };
+  handler(event as ToEventMap<TEvent>[K]);
+};
+
+// AFTER
+const listener = (e: Event) => {
+  const customEvent = e as CustomEvent & { originalEvent?: DomainEvent };
+  
+  // Invariant: originalEvent は wrapAsCustomEvent() で必ず設定される
+  if (!customEvent.originalEvent) {
+    throw new Error(
+      `Event "${e.type}" was dispatched without originalEvent. ` +
+      `This indicates a programming error. Use Engine.execute() to dispatch events.`
+    );
+  }
+  
+  handler(customEvent.originalEvent as ToEventMap<TEvent>[K]);
+};
+```
+
+#### Step 2.2: event-bus.ts の originalEvent assertion 追加
+
+**ファイル**: `src/core/event-bus.ts` L69-76
+
+**変更内容**:
+```typescript
+// BEFORE
+const listener = (e: Event) => {
+  const customEvent = e as CustomEvent & { originalEvent?: DomainEvent };
+  const event = customEvent.originalEvent ?? {
+    type: e.type,
+    data: (e as CustomEvent).detail,
+  };
+  // ...
+};
+
+// AFTER
+const listener = (e: Event) => {
+  const customEvent = e as CustomEvent & { originalEvent?: DomainEvent };
+  
+  if (!customEvent.originalEvent) {
+    throw new Error(
+      `Event "${e.type}" was dispatched without originalEvent. ` +
+      `This indicates a programming error. Use EventBus.publish() to dispatch events.`
+    );
+  }
+  
+  const event = customEvent.originalEvent as ToEventMap<TEvent>[K];
+  // ... rest of handler
+};
+```
+
+#### Step 2.3: 型定義強化（Optional）
+
+**ファイル**: `src/lib/events.ts`
+
+**追加内容**:
+```typescript
+/**
+ * CustomEvent with guaranteed originalEvent property
+ * 
+ * This type ensures that all events dispatched through RISE
+ * maintain a reference to the original DomainEvent object.
+ */
+export interface WrappedCustomEvent<E extends DomainEvent>
+  extends CustomEvent<E['data']> {
+  readonly originalEvent: E;
+}
+
+// wrapAsCustomEvent の戻り値型を更新
+export const wrapAsCustomEvent = <E extends DomainEvent>(
+  event: E
+): WrappedCustomEvent<E> => {
+  const ce = new CustomEvent(event.type, {
+    detail: event.data,
+  }) as WrappedCustomEvent<E>;
+  (ce as { originalEvent: E }).originalEvent = event;
+  return ce;
+};
+```
+
+---
+
+### Milestone 3: ドキュメント整備
+
+#### Step 3.1: docs/DEFENSIVE_CODING.md 作成
+
+**新規ファイル**: `docs/DEFENSIVE_CODING.md`
+
+**内容**: Code Reviewer が設計した Policy ドキュメントを配置
+
+主なセクション:
+- 原則（Fail Fast, Trust Internal, Explicit Errors, Optional with Defaults）
+- 検証戦略（Public API / Internal / Optional Features）
+- エラーハンドリング戦略
+- DO / DON'T の具体例
+
+#### Step 3.2: AGENTS.md に Event Dispatch Contract 追加
+
+**ファイル**: `AGENTS.md`
+
+**追加セクション**:
+```markdown
+## Event Dispatch Contract
+
+RISE では、イベントは必ず以下の方法で発行される必要があります：
+
+- `Engine.execute(command)` - コマンド実行によるイベント発行
+- `EventBus.publish(event)` - 直接イベント発行
+
+**禁止事項:**
+- `EventTarget.dispatchEvent()` を直接呼ぶことは禁止されています
+- 内部実装では `wrapAsCustomEvent()` によりイベントがラップされ、
+  `originalEvent` プロパティに完全な `DomainEvent` が保持されます
+
+**違反時の動作:**
+`originalEvent` が欠損したイベントが検出された場合、即座に `Error` がスローされます。
+これはプログラミングエラーを示しており、修正が必要です。
+```
+
+---
+
+### Milestone 4: テスト追加
+
+#### Step 4.1-4.2: assertion テスト追加
+
+**Note**: `originalEvent` 欠損は通常発生しないため、テストは「人工的に発火」させる必要があります。
+
+**ファイル**: `tests/engine.test.ts`
+
+```typescript
+describe('Engine event dispatch contract', () => {
+  test('should throw error when originalEvent is missing', () => {
+    // Given
+    const engine = new Engine(eventStore, counterConfig);
+    let caughtError: Error | undefined;
+
+    engine.on('Incremented', () => {
+      // This should not be called
+    });
+
+    // When: Directly dispatch CustomEvent without originalEvent (API misuse)
+    try {
+      const invalidEvent = new CustomEvent('Incremented', { detail: { amount: 1 } });
+      engine.dispatchEvent(invalidEvent);
+    } catch (error) {
+      caughtError = error as Error;
+    }
+
+    // Then
+    expect(caughtError).toBeDefined();
+    expect(caughtError?.message).toContain('without originalEvent');
+    expect(caughtError?.message).toContain('programming error');
+  });
+});
+```
+
+**ファイル**: `tests/event-bus.test.ts`
+
+```typescript
+describe('EventBus event dispatch contract', () => {
+  test('should throw error when originalEvent is missing', () => {
+    // Given
+    const bus = new EventBus<TestEvent>();
+    let caughtError: Error | undefined;
+
+    bus.on('TestEvent', () => {
+      // This should not be called
+    });
+
+    // When: Directly dispatch CustomEvent without originalEvent (API misuse)
+    try {
+      const invalidEvent = new CustomEvent('TestEvent', { detail: { value: 42 } });
+      bus.dispatchEvent(invalidEvent);
+    } catch (error) {
+      caughtError = error as Error;
+    }
+
+    // Then
+    expect(caughtError).toBeDefined();
+    expect(caughtError?.message).toContain('without originalEvent');
+  });
+});
+```
+
+---
+
+## Validation and Acceptance
+
+### 受け入れ条件
+
+1. **コード修正**
+   - [x] engine.ts に assertion 追加
+   - [x] event-bus.ts に assertion 追加
+   - [x] 型定義強化（Optional）
+
+2. **ドキュメント**
+   - [x] docs/DEFENSIVE_CODING.md 作成
+   - [x] AGENTS.md に Contract 追加
+   - [x] CHANGELOG.md に v0.6.1 エントリ追加
+
+3. **テスト**
+   - [x] assertion テスト追加（Engine）
+   - [x] assertion テスト追加（EventBus）
+   - [x] 全テストがパス
+   - [x] カバレッジ 80% 以上維持
+
+4. **品質**
+   - [x] `pnpm lint` でエラーなし
+   - [x] `pnpm build` が成功
+   - [x] `pnpm test:coverage` がパス
+
+### 検証手順
+
+```bash
+# 1. lint/build 確認
+pnpm lint && pnpm build
+
+# 2. テスト実行
+pnpm test:coverage
+
+# 3. Examples 動作確認
+pnpm tsx examples/counter.ts
+pnpm tsx examples/cart/main.ts
+```
+
+---
+
+## Risk Assessment
+
+| リスク | 影響 | 軽減策 |
+|--------|------|--------|
+| assertion が誤検出 | 中 | 既存テストで検証、正常フローでは発火しない |
+| エラーメッセージが不明瞭 | 低 | 明確なメッセージと修正方法を記載 |
+| ドキュメントの不整合 | 低 | Code Reviewer の設計に基づく |
+
+### 破壊的変更の評価
+
+**判定**: **非破壊的変更（Patch Version）**
+
+**理由**:
+- 正常な API 使用では影響なし
+- 不正な API 使用（`dispatchEvent` 直接呼び出し）のみがエラーになる
+- エラーメッセージで修正方法を明示
+
+**バージョニング**: v0.6.0 → v0.6.1
+
+---
+
+## Concrete Steps
+
+| # | Command | Expected Output |
+|---|---------|-----------------|
+| 1 | コード修正（2.1-2.3） | assertion 追加、型強化 |
+| 2 | ドキュメント作成（3.1-3.2） | docs/DEFENSIVE_CODING.md, AGENTS.md更新 |
+| 3 | テスト追加（4.1-4.2） | 2 tests 追加 |
+| 4 | `pnpm lint` | No errors |
+| 5 | `pnpm build` | Build successful |
+| 6 | `pnpm test:coverage` | 104+ tests pass, coverage ≥ 80% |
+| 7 | Git commit | v0.6.1 defensive coding policy |
+
