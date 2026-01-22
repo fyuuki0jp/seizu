@@ -6,6 +6,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [0.6.0] - 2026-01-22
+
+### Changed
+- **Engine Refactoring (SRP)**: `execute` method split into 4 private methods
+  - `loadState()`: Load snapshot and events
+  - `persistEvents()`: Add metadata and persist
+  - `dispatchEvents()`: Dispatch to EventTarget + EventBus
+  - `maybeSnapshot()`: Auto-snapshot with conditions
+  - Improved code readability and maintainability
+- **DRY Improvement**: `getState()` now reuses `loadState()` to eliminate duplication
+
+### Added
+- **Test Coverage Enforcement**: 80% coverage thresholds enforced in CI
+  - Configured in `vitest.config.ts` with v8 provider
+  - `pnpm test:coverage` command added
+  - GitHub Actions CI validates coverage on every push/PR
+- **Exhaustiveness Checks**: Added type-level exhaustiveness checks to all example deciders
+  - `examples/order-flow/inventory/decider.ts`
+  - `examples/order-flow/purchase-order/decider.ts`
+  - `examples/order-flow-saga/inventory/decider.ts`
+  - `examples/order-flow-saga/payment/decider.ts`
+- **Example Integration Tests**: New tests for all examples
+  - `tests/examples/counter.test.ts`: Counter increment/decrement scenarios
+  - `tests/examples/cart.test.ts`: Cart creation, item add/remove
+  - `tests/examples/order-flow.test.ts`: Multi-aggregate integration with EventBus
+
+### Fixed
+- Incomplete exhaustiveness check in `examples/order-flow/inventory/decider.ts`
+
+### Documentation
+- README.md for `examples/order-flow-saga/` (already existed, confirmed complete)
+
+### Quality Metrics
+- **Test Count**: 78 → 109 tests (+31)
+- **Test Coverage**: 97.56% (lines), 97.33% (branches), 96.42% (functions)
+- **Code Review**: All phases reviewed and approved by code-reviewer agent
+
 ## [0.6.1] - 2026-01-22
 
 ### Changed

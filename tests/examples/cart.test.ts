@@ -66,4 +66,33 @@ describe('Cart example integration', () => {
     // Then
     expect(result.ok).toBe(false);
   });
+
+  it('should remove item from cart', async () => {
+    // Given
+    const cartId = 'cart-2';
+    await engine.execute({
+      type: 'CreateCart',
+      streamId: cartId,
+      userId: 'user-1',
+    });
+    await engine.execute({
+      type: 'AddItem',
+      streamId: cartId,
+      itemId: 'item-1',
+      quantity: 2,
+      price: 100,
+    });
+
+    // When
+    const result = await engine.execute({
+      type: 'RemoveItem',
+      streamId: cartId,
+      itemId: 'item-1',
+    });
+
+    // Then
+    expect(result.ok).toBe(true);
+    const state = await engine.getState(cartId);
+    expect(state.items.size).toBe(0);
+  });
 });

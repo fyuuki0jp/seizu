@@ -1,6 +1,6 @@
 {
   "name": "rise",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Lightweight Event Sourcing framework for building durable Core layers in TypeScript",
   "keywords": [
     "event-sourcing",

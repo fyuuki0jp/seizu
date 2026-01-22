@@ -237,8 +237,601 @@ export const defineProjection = <TState, TEvent extends DomainEvent>(
 
 - [ ] `@rise/adapter-postgres` パッケージ
 - [ ] `@rise/adapter-redis` パッケージ
-- [ ] CLI ツール (`rise init` でプロジェクト生成)
-- [ ] Saga サポート (`defineSaga()` ヘルパー)
+
+---
+
+# RISE スケーラビリティ改善ロードマップ (v0.7.0 - v1.0.0)
+
+## Vision
+
+**「ドメインをスマートに記述し、そのコードとテストがそのままドキュメント・フローチャートになる」**
+
+## コアコンセプト（不変）
+
+| コンセプト | 説明 |
+|-----------|------|
+| **シンプルさ優先** | ヘルパーに依存しないPlain TypeScript |
+| **明示的エラー処理** | Result型によるRailway Oriented Programming |
+| **Functional Core** | decider/reducerは純粋関数 |
+| **ドメインのリーダビリティ** | コードがそのままドキュメントになる |
+| **ゼロ依存コア** | 標準Web APIのみ使用 |
+
+## 除外する機能（コンセプトから外れる）
+
+- ❌ ファクトリ関数（createEngine等）- 魔法的な隠蔽を避ける
+- ❌ Saga/Process Manager のライブラリ化 - ユーザーが自由に実装すべき
+- ❌ 過度なヘルパー - 素のTypeScriptで書けることを重視
+
+## 3つの柱
+
+| 柱 | 内容 | 位置づけ |
+|---|------|---------|
+| **1. ライブラリ本体** | 最小限の改善（Standard Schema、テストヘルパー、メタデータ） | 必須 |
+| **2. CLIツール** | 静的解析でドキュメント/フローチャート生成 | 主要開発 |
+| **3. ドキュメント** | ベストプラクティス、パターン集 | 充実化 |
+
+---
+
+## Phase 1: v0.7.0 - ライブラリ最小改善
+
+### Progress (v0.7.0)
+- [ ] 1.1 EventMeta に correlationId/causationId 追加
+- [ ] 1.2 テストヘルパー（deciderSpec）実装
+- [ ] 1.3 package.json の exports/peerDependencies 更新
+- [ ] 1.4 テストヘルパーのテスト追加
+- [ ] 1.5 ドキュメント（correlationId使用ガイド）追加
+
+### 1.1 correlationId / causationId 標準サポート
+
+**目的:** CLIツールでのフロー追跡、デバッグ支援
+
+**変更内容:**
+```typescript
+// src/lib/events.ts 更新
+export interface EventMeta {
+  readonly id: string;
+  readonly timestamp: Date;
+  readonly correlationId?: string;  // 追加（optional）
+  readonly causationId?: string;    // 追加（optional）
+  readonly [key: string]: unknown;
+}
+```
+
+**ポイント:**
+- optionalなので後方互換性維持
+- ユーザーが明示的に設定（自動伝播はしない - シンプルさ優先）
+
+**推奨使用パターン（ドキュメントに記載）:**
+```typescript
+// ユーザーコード例: correlationId の手動伝播
+const handleOrderPlaced = async (event: OrderPlaced) => {
+  await inventoryEngine.execute({
+    type: 'ReserveStock',
+    streamId: `inv-${event.data.productId}`,
+    quantity: event.data.quantity,
+    // 明示的に伝播
+    correlationId: event.meta?.correlationId,
+    causationId: event.meta?.id,
+  });
+};
+```
+
+### 1.2 テストヘルパー（`rise/testing`）
+
+**目的:** テストがシナリオドキュメントになる形式を提供
+
+**設計方針:**
+- vitest/jest を peer deps に設定
+- 別エントリポイント（`rise/testing`）で提供
+- コアには影響なし
+
+**詳細仕様:**
+
+```typescript
+// src/testing/index.ts (新規 - 別エントリポイント)
+
+export interface ScenarioResult {
+  name: string;
+  given: { type: string; data: unknown }[];
+  when: { type: string; [key: string]: unknown };
+  expected: { type: string; data: unknown }[] | { error: true };
+  actual: { type: string; data: unknown }[] | { error: unknown };
+  passed: boolean;
+}
+
+/**
+ * Given-When-Then style test helper for deciders
+ */
+export const deciderSpec = <TCommand, TEvent extends { type: string; data: unknown }, TState, TError>(
+  decider: (command: TCommand, state: TState) => Result<TEvent[], TError>,
+  reducer: (state: TState, event: TEvent) => TState,
+  initialState: TState
+) => {
+  const scenarios: ScenarioResult[] = [];
+
+  return {
+    scenario: (name: string) => ({
+      given: (events: TEvent[]) => {
+        const state = events.reduce(reducer, initialState);
+        return {
+          when: (command: TCommand) => {
+            const result = decider(command, state);
+            return {
+              /**
+               * Assert that the decider produces the expected events
+               * Comparison: type and data のみ比較（meta は無視）
+               */
+              then: (expectedEvents: TEvent[]) => {
+                if (!result.ok) {
+                  const scenario: ScenarioResult = {
+                    name,
+                    given: events.map(e => ({ type: e.type, data: e.data })),
+                    when: command as Record<string, unknown>,
+                    expected: expectedEvents.map(e => ({ type: e.type, data: e.data })),
+                    actual: { error: result.error },
+                    passed: false,
+                  };
+                  scenarios.push(scenario);
+                  throw new Error(
+                    `Expected success but got error:\n` +
+                    `  Scenario: ${name}\n` +
+                    `  Error: ${JSON.stringify(result.error)}`
+                  );
+                }
+
+                const actual = result.value.map(e => ({ type: e.type, data: e.data }));
+                const expected = expectedEvents.map(e => ({ type: e.type, data: e.data }));
+
+                const scenario: ScenarioResult = {
+                  name,
+                  given: events.map(e => ({ type: e.type, data: e.data })),
+                  when: command as Record<string, unknown>,
+                  expected,
+                  actual,
+                  passed: JSON.stringify(actual) === JSON.stringify(expected),
+                };
+                scenarios.push(scenario);
+
+                // Deep equality check (vitest/jest の expect を使用)
+                if (!scenario.passed) {
+                  throw new Error(
+                    `Event mismatch:\n` +
+                    `  Scenario: ${name}\n` +
+                    `  Expected: ${JSON.stringify(expected)}\n` +
+                    `  Actual: ${JSON.stringify(actual)}`
+                  );
+                }
+              },
+
+              /**
+               * Assert that the decider returns an error matching the predicate
+               */
+              thenError: (predicate: (error: TError) => boolean) => {
+                if (result.ok) {
+                  const scenario: ScenarioResult = {
+                    name,
+                    given: events.map(e => ({ type: e.type, data: e.data })),
+                    when: command as Record<string, unknown>,
+                    expected: { error: true },
+                    actual: result.value.map(e => ({ type: e.type, data: e.data })),
+                    passed: false,
+                  };
+                  scenarios.push(scenario);
+                  throw new Error(
+                    `Expected error but got success:\n` +
+                    `  Scenario: ${name}\n` +
+                    `  Events: ${JSON.stringify(result.value.map(e => e.type))}`
+                  );
+                }
+
+                const passed = predicate(result.error);
+                const scenario: ScenarioResult = {
+                  name,
+                  given: events.map(e => ({ type: e.type, data: e.data })),
+                  when: command as Record<string, unknown>,
+                  expected: { error: true },
+                  actual: { error: result.error },
+                  passed,
+                };
+                scenarios.push(scenario);
+
+                if (!passed) {
+                  throw new Error(
+                    `Error predicate failed:\n` +
+                    `  Scenario: ${name}\n` +
+                    `  Error: ${JSON.stringify(result.error)}`
+                  );
+                }
+              },
+            };
+          },
+        };
+      },
+    }),
+
+    /** Get all recorded scenarios (for CLI doc generation) */
+    getScenarios: () => [...scenarios],
+  };
+};
+```
+
+**使用例:**
+```typescript
+// tests/cart.spec.ts
+import { deciderSpec } from 'rise/testing';
+import { decider, reducer, initialState } from '../src/domain/cart';
+
+const spec = deciderSpec(decider, reducer, initialState);
+
+describe('Cart Aggregate', () => {
+  test('should add item to existing cart', () => {
+    spec.scenario('add item to cart')
+      .given([cartCreated('cart-1')])
+      .when({ type: 'AddItem', streamId: 'cart-1', itemId: 'item-1', quantity: 2 })
+      .then([itemAdded('item-1', 2)]);
+  });
+
+  test('should fail to add item to non-existent cart', () => {
+    spec.scenario('add item to non-existent cart')
+      .given([])
+      .when({ type: 'AddItem', streamId: 'cart-1', itemId: 'item-1', quantity: 2 })
+      .thenError((e) => e._tag === 'CartNotFound');
+  });
+});
+```
+
+**package.json 更新:**
+```json
+{
+  "exports": {
+    ".": {
+      "import": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+      "require": { "types": "./dist/index.d.cts", "default": "./dist/index.cjs" }
+    },
+    "./testing": {
+      "import": { "types": "./dist/testing.d.ts", "default": "./dist/testing.js" },
+      "require": { "types": "./dist/testing.d.cts", "default": "./dist/testing.cjs" }
+    }
+  },
+  "peerDependencies": {
+    "vitest": ">=1.0.0",
+    "jest": ">=29.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vitest": { "optional": true },
+    "jest": { "optional": true }
+  }
+}
+```
+
+**tsup.config.ts 更新:**
+```typescript
+export default defineConfig({
+  entry: ['src/index.ts', 'src/testing/index.ts'],
+  // ...
+});
+```
+
+### Validation and Acceptance (v0.7.0)
+
+**受け入れ条件:**
+
+1. **correlationId/causationId**
+   - EventMeta 型に optional フィールドが追加されている
+   - 既存テストが全てパス（後方互換性）
+   - ドキュメントに使用例が記載されている
+
+2. **テストヘルパー**
+   - `import { deciderSpec } from 'rise/testing'` が動作する
+   - then() で type/data のみ比較される（meta は無視）
+   - thenError() でエラー条件を検証できる
+   - getScenarios() でシナリオ一覧を取得できる
+
+3. **テスト**
+   - テストヘルパー自体のテスト: 5+ tests
+   - 既存テスト全パス
+
+**検証コマンド:**
+```bash
+# 1. ビルド確認
+pnpm build
+# Expected: dist/index.js, dist/testing.js が生成される
+
+# 2. テスト実行
+pnpm test
+# Expected: 全テストパス
+
+# 3. テストヘルパーのimport確認
+node -e "import('rise/testing').then(m => console.log(Object.keys(m)))"
+# Expected: ['deciderSpec']
+
+# 4. examples でテストヘルパー使用
+pnpm vitest run tests/examples/cart-with-spec.test.ts
+# Expected: Given-When-Then 形式のテストがパス
+```
+
+---
+
+## Phase 2: v0.8.0 - Standard Schema対応
+
+### 2.1 Standard Schema インターフェース
+
+**目的:** Zod/Valibot等でのスキーマ検証をオプションで提供
+
+**設計方針:**
+- ライブラリに依存を追加しない（インターフェースのみ内部にコピー）
+- Engine内部での自動検証は**しない**（明示性を維持）
+- ユーザーが任意で使用
+
+```typescript
+// src/lib/schema.ts (新規)
+
+// Standard Schema インターフェースを内部にコピー（依存なし）
+export interface StandardSchemaV1<Input = unknown, Output = Input> {
+  readonly '~standard': {
+    readonly version: 1;
+    readonly vendor: string;
+    validate(value: unknown): StandardResult<Output> | Promise<StandardResult<Output>>;
+  };
+}
+
+interface StandardResult<T> {
+  readonly value?: T;
+  readonly issues?: readonly StandardIssue[];
+}
+
+interface StandardIssue {
+  readonly message: string;
+  readonly path?: readonly (string | number)[];
+}
+
+/**
+ * Validate data using Standard Schema
+ * @example
+ * import { z } from 'zod';
+ * 
+ * const CommandSchema = z.object({ amount: z.number().positive() });
+ * const result = validateWithSchema(commandData, CommandSchema);
+ * if (!result.ok) {
+ *   console.error(result.error);
+ * }
+ */
+export const validateWithSchema = <T>(
+  data: unknown,
+  schema: StandardSchemaV1<unknown, T>
+): Result<T, ValidationError[]> => {
+  const standard = schema['~standard'];
+  const result = standard.validate(data);
+  
+  if (result instanceof Promise) {
+    throw new Error('Async validation not supported. Use validateWithSchemaAsync instead.');
+  }
+  
+  if (result.issues && result.issues.length > 0) {
+    return err(result.issues.map(i => ({ 
+      message: i.message, 
+      path: i.path 
+    })));
+  }
+  
+  return ok(result.value as T);
+};
+```
+
+---
+
+## Phase 3: v0.9.0 - CLIツール（`@rise/cli`）
+
+### 3.1 概要
+
+```bash
+# インストール
+npm install -D @rise/cli
+
+# ドメイン解析
+rise analyze ./src/domain --output ./docs/domain.json
+
+# フローチャート生成（Mermaid）
+rise visualize ./src/domain --format mermaid --output ./docs
+
+# HTML ドキュメント生成（GitHub Pages対応）
+rise docs ./src/domain --output ./docs --html
+
+# テストシナリオドキュメント生成
+rise test-docs ./tests --coverage ./coverage/coverage-final.json --output ./docs/scenarios
+```
+
+### 3.2 生成物
+
+| コマンド | 生成物 | 形式 |
+|---------|--------|------|
+| `rise analyze` | Aggregate一覧、Command/Event/State型情報 | JSON, Markdown |
+| `rise visualize` | Aggregateフローチャート、EventBusフロー図 | Mermaid (.md), SVG |
+| `rise docs` | 統合ドキュメントサイト | HTML（シンプル、依存なし） |
+| `rise test-docs` | テストケースからシナリオドキュメント | Markdown, HTML |
+
+### 3.3 静的解析のアプローチ
+
+TypeScript Compiler APIを使用してコードを解析：
+
+```typescript
+// CLIツール内部の解析ロジック（概念）
+import * as ts from 'typescript';
+
+interface AggregateInfo {
+  name: string;
+  events: EventInfo[];
+  commands: CommandInfo[];
+  stateTransitions: StateTransition[];
+}
+
+const analyzeAggregate = (sourceFile: ts.SourceFile): AggregateInfo => {
+  // 1. DomainEvent型の定義を抽出
+  const events = extractEventTypes(sourceFile);
+  
+  // 2. Command型の定義を抽出
+  const commands = extractCommandTypes(sourceFile);
+  
+  // 3. decider関数のswitch文を解析してフロー抽出
+  const deciderFlows = analyzeDeciderFunction(sourceFile);
+  
+  // 4. reducer関数を解析してState遷移を抽出
+  const stateTransitions = analyzeReducerFunction(sourceFile);
+  
+  return { name, events, commands, stateTransitions };
+};
+```
+
+### 3.4 HTML出力（シンプル）
+
+**設計方針:**
+- 最小限のCSS（外部依存なし）
+- Mermaid.jsはCDNから `<script>` タグで読み込み
+- 単一HTML or 静的ファイル群（GitHub Pages対応）
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <title>RISE Domain Documentation</title>
+  <style>
+    /* 最小限のスタイル */
+    body { font-family: system-ui; max-width: 1200px; margin: 0 auto; padding: 2rem; }
+    .mermaid { background: #f5f5f5; padding: 1rem; border-radius: 4px; }
+    /* ... */
+  </style>
+</head>
+<body>
+  <h1>Domain: Cart</h1>
+  
+  <h2>Aggregate Flow</h2>
+  <div class="mermaid">
+    stateDiagram-v2
+      [*] --> Initial
+      Initial --> Active: CartCreated
+      Active --> Active: ItemAdded
+      Active --> CheckedOut: CartCheckedOut
+  </div>
+  
+  <h2>Test Scenarios</h2>
+  <table>
+    <tr><th>Scenario</th><th>Given</th><th>When</th><th>Then</th><th>Status</th></tr>
+    <tr>
+      <td>should add item to cart</td>
+      <td>CartCreated</td>
+      <td>AddItem</td>
+      <td>ItemAdded</td>
+      <td>✅ Pass</td>
+    </tr>
+  </table>
+  
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: true });</script>
+</body>
+</html>
+```
+
+### 3.5 テスト結果との統合
+
+**アプローチ:**
+1. 静的解析でGiven-When-Thenパターンを抽出（基準）
+2. vitest/jestのカバレッジJSON (`coverage-final.json`) を読み込み
+3. テスト結果と照合してステータス表示
+
+```bash
+# CI での使用例
+pnpm test:coverage
+rise test-docs ./tests \
+  --coverage ./coverage/coverage-final.json \
+  --output ./docs/scenarios \
+  --html
+```
+
+**生成されるドキュメント:**
+- 各テストケースのGiven-When-Then形式の説明
+- カバレッジ状況（どのシナリオがテストされているか）
+- パス/フェイル状態
+
+---
+
+## Phase 4: v1.0.0 - 安定版リリース
+
+### 4.1 完成基準
+
+1. **ライブラリ本体**
+   - correlationId/causationId サポート
+   - テストヘルパー (`rise/testing`)
+   - Standard Schema対応 (`rise/schema`)
+   - 全テストパス、カバレッジ80%以上
+
+2. **CLIツール**
+   - `rise analyze` - ドメイン解析
+   - `rise visualize` - フローチャート生成
+   - `rise docs` - HTML ドキュメント生成
+   - `rise test-docs` - テストシナリオドキュメント
+
+3. **ドキュメント**
+   - Getting Started ガイド
+   - ベストプラクティス集
+   - パターン集（複数Aggregate、EventBus連携等）
+
+### 4.2 パッケージ構成
+
+```
+rise/                    # メインパッケージ（ゼロ依存）
+├── dist/
+│   ├── index.js         # コア
+│   ├── testing.js       # テストヘルパー（vitest/jest peer deps）
+│   └── schema.js        # Standard Schema対応
+└── package.json
+
+@rise/cli/               # CLIツール（別パッケージ）
+├── bin/rise.js
+├── src/
+│   ├── analyze.ts
+│   ├── visualize.ts
+│   ├── docs.ts
+│   └── test-docs.ts
+└── package.json
+```
+
+---
+
+## ロードマップ
+
+| バージョン | 主要機能 | 推定工数 |
+|-----------|---------|---------|
+| **v0.7.0** | correlationId/causationId、テストヘルパー | 3-4日 |
+| **v0.8.0** | Standard Schema対応 | 2-3日 |
+| **v0.9.0** | CLIツール（analyze, visualize, docs） | 7-10日 |
+| **v1.0.0** | CLIツール完成（test-docs）、ドキュメント整備 | 5-7日 |
+
+**合計:** 約17-24日
+
+---
+
+## Decision Log (スケーラビリティ改善)
+
+| 日付 | 決定 | 理由 |
+|------|------|------|
+| 2026-01-22 | ファクトリ関数（createEngine等）は追加しない | シンプルさ優先、魔法的な隠蔽を避ける |
+| 2026-01-22 | Saga/Process Managerはライブラリ化しない | ユーザーが自由に実装すべき |
+| 2026-01-22 | CLIツールを主要開発とする | ドメインコード→ドキュメント生成が最も価値が高い |
+| 2026-01-22 | HTML出力はシンプル（依存なし） | 軽量性、GitHub Pages対応 |
+| 2026-01-22 | テストヘルパーはvitest/jestをpeer deps | テスト結果との統合に必要 |
+| 2026-01-22 | Standard Schemaはインターフェースコピー | ゼロ依存維持、ユーザーが好きなライブラリを選択 |
+| 2026-01-22 | correlationId/causationIdは手動設定 | シンプルさ優先、自動伝播はしない |
+
+---
+
+## Risk Assessment
+
+| リスク | 影響 | 軽減策 |
+|--------|------|--------|
+| TypeScript Compiler APIの複雑さ | CLIツール開発遅延 | ts-morphなどの抽象化ライブラリ検討 |
+| テスト結果との統合の複雑さ | test-docs機能の遅延 | vitest/jest の標準出力形式に限定 |
+| HTML出力のデザイン品質 | ユーザー体験低下 | 最小限のスタイルに集中、将来的にテーマ対応 |
+| 後方互換性の破壊 | 既存ユーザー影響 | optional フィールドのみ追加、Breaking Changes なし |
 
 ---
 

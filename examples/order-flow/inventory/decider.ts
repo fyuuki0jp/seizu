@@ -69,7 +69,7 @@ export const decider = (
     }
     default: {
       const _exhaustive: never = command;
-      return ok([]);
+      return _exhaustive;
     }
   }
 };

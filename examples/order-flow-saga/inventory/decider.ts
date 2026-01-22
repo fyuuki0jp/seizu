@@ -55,7 +55,9 @@ export const decider = (
         createStockReleased(productId, command.quantity, command.orderId),
       ]);
     }
-    default:
-      return ok([]);
+    default: {
+      const _exhaustive: never = command;
+      return _exhaustive;
+    }
   }
 };
