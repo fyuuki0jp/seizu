@@ -173,3 +173,75 @@ describe('EventPublisher interface', () => {
     expectTypeOf(asyncPublisher).toMatchTypeOf<EventPublisher>();
   });
 });
+
+describe('EventBus concurrency', () => {
+  test('should handle multiple listeners with errors', async () => {
+    // Given
+    const bus = new EventBus<TestEvent>();
+    const errors: unknown[] = [];
+    const results: string[] = [];
+    const testEvent = createTestEvent(42);
+
+    bus.on('TestEvent', () => {
+      results.push('listener1');
+    });
+    bus.on(
+      'TestEvent',
+      () => {
+        throw new Error('Listener 2 failed');
+      },
+      { onError: (e) => errors.push(e) }
+    );
+    bus.on('TestEvent', () => {
+      results.push('listener3');
+    });
+
+    // When
+    bus.publish(testEvent);
+    await new Promise((r) => setTimeout(r, 10));
+
+    // Then
+    expect(results).toContain('listener1');
+    expect(results).toContain('listener3');
+    expect(errors).toHaveLength(1);
+  });
+
+  test('should not call handler after unsubscribe during publish', () => {
+    // Given
+    const bus = new EventBus<TestEvent>();
+    const results: string[] = [];
+    const testEvent = createTestEvent(42);
+    const unsubscribe = bus.on('TestEvent', () => {
+      results.push('called');
+    });
+
+    // When
+    unsubscribe();
+    bus.publish(testEvent);
+
+    // Then
+    expect(results).toHaveLength(0);
+  });
+
+  test('should handle async publish errors', async () => {
+    // Given
+    const bus = new EventBus<TestEvent>();
+    const errors: unknown[] = [];
+    const testEvent = createTestEvent(42);
+
+    bus.on(
+      'TestEvent',
+      async () => {
+        throw new Error('Async error');
+      },
+      { onError: (e) => errors.push(e) }
+    );
+
+    // When
+    bus.publish(testEvent);
+    await new Promise((r) => setTimeout(r, 10));
+
+    // Then
+    expect(errors).toHaveLength(1);
+  });
+});

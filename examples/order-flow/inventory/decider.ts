@@ -67,7 +67,9 @@ export const decider = (
         createStockReleased(productId, command.quantity, command.orderId),
       ]);
     }
-    default:
+    default: {
+      const _exhaustive: never = command;
       return ok([]);
+    }
   }
 };

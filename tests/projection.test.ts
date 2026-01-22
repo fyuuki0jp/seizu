@@ -461,3 +461,68 @@ describe('Projector error handling', () => {
     expect((errors[0] as Error).message).toBe('Projection failed');
   });
 });
+
+describe('Projector complex scenarios', () => {
+  test('should handle multiple projections subscribed to same bus', async () => {
+    // Given
+    const bus = new EventBus<TestEvent>();
+    const store1 = new InMemoryProjectionStore<number>();
+    const store2 = new InMemoryProjectionStore<number>();
+
+    const projector1 = new Projector(
+      defineProjection(
+        'count1',
+        () => 0,
+        (s) => s + 1
+      ),
+      store1,
+      (e) => (e.data as { id: string }).id
+    );
+    const projector2 = new Projector(
+      defineProjection(
+        'count2',
+        () => 0,
+        (s) => s + 10
+      ),
+      store2,
+      (e) => (e.data as { id: string }).id
+    );
+
+    projector1.subscribe(bus, ['TestEvent']);
+    projector2.subscribe(bus, ['TestEvent']);
+
+    // When
+    const testEvent: TestEvent = {
+      type: 'TestEvent',
+      data: { id: 'test-1' },
+      meta: createMeta(),
+    };
+    bus.publish(testEvent);
+    await new Promise((r) => setTimeout(r, 50));
+
+    // Then
+    expect(await store1.get('test-1')).toBe(1);
+    expect(await store2.get('test-1')).toBe(10);
+  });
+
+  test('should handle rebuild with empty events', async () => {
+    // Given
+    const store = new InMemoryProjectionStore<number>();
+    const projector = new Projector(
+      defineProjection(
+        'count',
+        () => 0,
+        (s) => s + 1
+      ),
+      store,
+      (e) => (e.data as { id: string }).id
+    );
+
+    // When
+    await projector.rebuild([]);
+
+    // Then
+    const allStates = await store.getAll();
+    expect(allStates.size).toBe(0);
+  });
+});

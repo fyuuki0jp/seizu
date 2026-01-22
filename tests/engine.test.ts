@@ -372,3 +372,72 @@ describe('Engine with EventBus', () => {
     expect((errors[0] as Error).message).toBe('Publish failed');
   });
 });
+
+describe('Engine boundary conditions', () => {
+  let eventStore: InMemoryEventStore<CounterEvent>;
+
+  beforeEach(() => {
+    eventStore = new InMemoryEventStore<CounterEvent>();
+  });
+
+  test('should not auto-snapshot when snapshotEvery is 0', async () => {
+    // Given
+    const { InMemorySnapshotStore } = await import(
+      '../src/core/in-memory-snapshot-store'
+    );
+    const snapshotStore = new InMemorySnapshotStore<CounterState>();
+    const engine = new Engine(eventStore, counterConfig, {
+      snapshotStore,
+      snapshotEvery: 0,
+    });
+
+    // When
+    await engine.execute({ type: 'Increment', streamId: 'test', amount: 1 });
+
+    // Then
+    const snapshot = await snapshotStore.load('test');
+    expect(snapshot).toBeUndefined();
+  });
+
+  test('should handle empty events array from decider', async () => {
+    // Given
+    const noOpConfig: AggregateConfig<
+      CounterCommand,
+      CounterEvent,
+      CounterState,
+      never
+    > = {
+      ...counterConfig,
+      decider: () => ok([]),
+    };
+    const engine = new Engine(eventStore, noOpConfig);
+
+    // When
+    const result = await engine.execute({
+      type: 'Increment',
+      streamId: 'test',
+      amount: 1,
+    });
+
+    // Then
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value).toHaveLength(0);
+    }
+  });
+
+  test('should handle multiple commands on same stream', async () => {
+    // Given
+    const engine = new Engine(eventStore, counterConfig);
+    const streamId = 'counter-1';
+
+    // When
+    await engine.execute({ type: 'Increment', streamId, amount: 5 });
+    await engine.execute({ type: 'Increment', streamId, amount: 3 });
+    await engine.execute({ type: 'Increment', streamId, amount: 2 });
+
+    // Then
+    const state = await engine.getState(streamId);
+    expect(state.value).toBe(10);
+  });
+});
