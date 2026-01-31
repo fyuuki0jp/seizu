@@ -88,7 +88,7 @@
     "plan": {
       "description": "Specialized in creating and updating project plans",
       "mode": "primary",
-      "model": "github-copilot/claude-opus-4.5",
+      "model": "github-copilot/gemini-3-pro-preview",
       "prompt": "{file:./prompts/plan.md}",
       "tools": {
         "write": false,
@@ -116,7 +116,7 @@
     "code-reviewer": {
       "description": "Reviews code for best practices and potential issues",
       "mode": "subagent",
-      "model": "github-copilot/claude-opus-4.5",
+      "model": "github-copilot/gpt-5.2-codex",
       "prompt": "{file:./prompts/code-reviewer.md}",
       "tools": {
         "write": false,
