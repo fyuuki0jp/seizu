@@ -2,6 +2,7 @@ import type { CoverageReport } from '../analyzer/coverage-types';
 import type { Messages } from '../i18n/types';
 import type { DocumentModel, LinkedContract } from '../types';
 import { renderCoverageSummary } from './coverage-section';
+import { renderScenarioSection } from './scenario-section';
 import {
   renderContractHeader,
   renderErrorCatalog,
@@ -19,6 +20,13 @@ export interface RenderOptions {
 /**
  * Render a DocumentModel into a complete Markdown string.
  * Deterministic: same input always produces the same output.
+ *
+ * Structure:
+ *   # Title
+ *   ## Scenarios          (if scenarios exist)
+ *   ## Table of Contents  (if 2+ contracts)
+ *   ## Contract Details   (each contract)
+ *   ## Coverage           (if coverageReport)
  */
 export function renderMarkdown(
   model: DocumentModel,
@@ -35,17 +43,29 @@ export function renderMarkdown(
     lines.push('');
   }
 
+  // Scenario layer (Use Case)
+  if (model.scenarios.length > 0) {
+    lines.push(renderScenarioSection(model.scenarios, messages));
+  }
+
   const sorted = [...model.contracts].sort((a, b) =>
     a.contract.id.localeCompare(b.contract.id)
   );
 
+  // Table of contents (if 2+ contracts)
   if (sorted.length > 1) {
     lines.push(renderTableOfContents(sorted, messages));
   }
 
-  for (let i = 0; i < sorted.length; i++) {
-    const linked = sorted[i];
+  // Contract detail layer (Domain)
+  if (sorted.length > 0 && model.scenarios.length > 0) {
+    lines.push('---');
+    lines.push('');
+    lines.push(`## ${messages.contractDetail.sectionTitle}`);
+    lines.push('');
+  }
 
+  for (const linked of sorted) {
     lines.push('---');
     lines.push('');
 

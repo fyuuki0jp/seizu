@@ -43,6 +43,7 @@ describe('integration', () => {
         title: 'カート管理 仕様書',
         description: 'ショッピングカートドメインのContract仕様',
         contracts: linked,
+        scenarios: [],
         sourceFiles: [contractPath, testPath],
       },
       { messages: ja }
@@ -91,6 +92,7 @@ describe('integration', () => {
         title: 'カート管理 仕様書',
         description: 'ショッピングカートドメインのContract仕様',
         contracts: linked,
+        scenarios: [],
         sourceFiles: [contractPath, testPath],
       },
       { messages: ja }
@@ -106,6 +108,7 @@ describe('integration', () => {
         title: 'Cart Specification',
         description: 'Shopping cart domain contracts',
         contracts: linked,
+        scenarios: [],
         sourceFiles: [contractPath, testPath],
       },
       { messages: en }

@@ -67,6 +67,20 @@ export interface Messages {
       pct: number
     ) => string;
   };
+  readonly scenarios: {
+    readonly sectionTitle: string;
+    readonly sectionDescription: string;
+    readonly columnStep: string;
+    readonly columnOperation: string;
+    readonly columnInput: string;
+    readonly columnExpected: string;
+    readonly expectOk: string;
+    readonly expectError: (tag: string) => string;
+    readonly noScenarios: string;
+  };
+  readonly contractDetail: {
+    readonly sectionTitle: string;
+  };
   readonly noDefined: string;
   readonly noDescription: string;
 }

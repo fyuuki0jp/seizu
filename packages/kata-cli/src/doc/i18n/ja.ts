@@ -64,6 +64,21 @@ export const ja: Messages = {
     summaryErrorTag: (covered, total, pct) =>
       `エラータグ網羅率: ${covered}/${total} (${pct.toFixed(1)}%)`,
   },
+  scenarios: {
+    sectionTitle: 'シナリオ',
+    sectionDescription:
+      '複数のContract操作を組み合わせたビジネスワークフローです。',
+    columnStep: '#',
+    columnOperation: '操作',
+    columnInput: '入力',
+    columnExpected: '期待結果',
+    expectOk: '成功',
+    expectError: (tag) => `エラー: \`${tag}\``,
+    noScenarios: '_シナリオ定義なし_',
+  },
+  contractDetail: {
+    sectionTitle: 'Contract詳細',
+  },
   noDefined: '_定義なし_',
   noDescription: '_説明なし（TSDocコメントを追加してください）_',
 };

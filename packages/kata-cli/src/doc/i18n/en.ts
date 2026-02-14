@@ -65,6 +65,21 @@ export const en: Messages = {
     summaryErrorTag: (covered, total, pct) =>
       `Error tag coverage: ${covered}/${total} (${pct.toFixed(1)}%)`,
   },
+  scenarios: {
+    sectionTitle: 'Scenarios',
+    sectionDescription:
+      'Business workflows composed from multiple contract operations.',
+    columnStep: '#',
+    columnOperation: 'Operation',
+    columnInput: 'Input',
+    columnExpected: 'Expected',
+    expectOk: 'Success',
+    expectError: (tag) => `Error: \`${tag}\``,
+    noScenarios: '_No scenarios defined_',
+  },
+  contractDetail: {
+    sectionTitle: 'Contract Details',
+  },
   noDefined: '_Not defined_',
   noDescription: '_No description (add a TSDoc comment)_',
 };

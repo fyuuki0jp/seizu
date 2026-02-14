@@ -17,7 +17,7 @@ type DuplicateItem = {
 const createCart = define<CartState, { userId: string }, AlreadyExists>({
   id: 'cart.create',
   pre: [(s) => (!s.exists ? pass : err({ tag: 'AlreadyExists' as const }))],
-  transition: (state, input) => ({
+  transition: (state) => ({
     ...state,
     exists: true,
   }),

@@ -77,6 +77,7 @@ describe('renderMarkdown', () => {
         },
       },
     ],
+    scenarios: [],
     sourceFiles: ['cart.ts', 'cart.test.ts'],
   };
 
@@ -150,6 +151,7 @@ describe('renderMarkdown', () => {
           testSuite: undefined,
         },
       ],
+      scenarios: [],
       sourceFiles: ['test.ts'],
     };
 
@@ -200,6 +202,7 @@ describe('renderMarkdown', () => {
           testSuite: undefined,
         },
       ],
+      scenarios: [],
       sourceFiles: ['test.ts'],
     };
 
