@@ -63,7 +63,6 @@ export interface ParsedScenarioStep {
   readonly index: number;
   readonly contractId: string;
   readonly inputLiteral: string;
-  readonly expect?: 'ok' | { error: string };
 }
 
 export interface ParsedScenario {

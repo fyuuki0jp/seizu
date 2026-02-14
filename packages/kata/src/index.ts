@@ -14,10 +14,8 @@ export {
 export type {
   Scenario,
   ScenarioDef,
-  ScenarioResult,
+  ScenarioFailure,
   StepDef,
-  StepOutcome,
-  StepResult,
 } from './scenario';
 // Scenario
 export { scenario, step } from './scenario';

@@ -71,9 +71,6 @@ export const ja: Messages = {
     columnStep: '#',
     columnOperation: '操作',
     columnInput: '入力',
-    columnExpected: '期待結果',
-    expectOk: '成功',
-    expectError: (tag) => `エラー: \`${tag}\``,
     noScenarios: '_シナリオ定義なし_',
   },
   contractDetail: {

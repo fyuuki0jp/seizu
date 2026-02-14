@@ -72,9 +72,6 @@ export const en: Messages = {
     columnStep: '#',
     columnOperation: 'Operation',
     columnInput: 'Input',
-    columnExpected: 'Expected',
-    expectOk: 'Success',
-    expectError: (tag) => `Error: \`${tag}\``,
     noScenarios: '_No scenarios defined_',
   },
   contractDetail: {

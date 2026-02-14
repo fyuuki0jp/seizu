@@ -73,9 +73,6 @@ export interface Messages {
     readonly columnStep: string;
     readonly columnOperation: string;
     readonly columnInput: string;
-    readonly columnExpected: string;
-    readonly expectOk: string;
-    readonly expectError: (tag: string) => string;
     readonly noScenarios: string;
   };
   readonly contractDetail: {

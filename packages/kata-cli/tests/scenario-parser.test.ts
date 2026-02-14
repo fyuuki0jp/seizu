@@ -7,7 +7,7 @@ function createSourceFile(code: string): ts.SourceFile {
 }
 
 describe('parseScenarios', () => {
-  test('parses a simple scenario with steps', () => {
+  test('parses a scenario with flow and steps', () => {
     const source = createSourceFile(`
 import { define, scenario, step } from 'kata';
 
@@ -26,8 +26,7 @@ const addItem = define<S, I, E>({
 /** 通常の購入フロー */
 const normalPurchase = scenario({
   id: 'cart.normalPurchase',
-  initial: emptyState,
-  steps: [
+  flow: (input) => [
     step(createCart, { userId: 'alice' }),
     step(addItem, { itemId: 'apple', qty: 3, price: 1.5 }),
   ],
@@ -52,54 +51,34 @@ const normalPurchase = scenario({
     expect(s.steps[1].inputLiteral).toContain('apple');
   });
 
-  test('parses step with expect error option', () => {
+  test('parses flow with block body (return statement)', () => {
     const source = createSourceFile(`
-import { scenario, step } from 'kata';
-
 const s = scenario({
-  id: 'test.error',
-  initial: {},
-  steps: [
-    step(createCart, { userId: 'alice' }, { expect: { error: 'AlreadyExists' } }),
-  ],
+  id: 'test.block',
+  flow: (input) => {
+    return [
+      step(create, { data: 1 }),
+    ];
+  },
 });
 `);
 
     const scenarios = parseScenarios(source);
     expect(scenarios).toHaveLength(1);
-    expect(scenarios[0].steps[0].expect).toEqual({
-      error: 'AlreadyExists',
-    });
-  });
-
-  test('parses step with expect ok option', () => {
-    const source = createSourceFile(`
-const s = scenario({
-  id: 'test.ok',
-  initial: {},
-  steps: [
-    step(createCart, { userId: 'alice' }, { expect: 'ok' }),
-  ],
-});
-`);
-
-    const scenarios = parseScenarios(source);
-    expect(scenarios).toHaveLength(1);
-    expect(scenarios[0].steps[0].expect).toBe('ok');
+    expect(scenarios[0].steps).toHaveLength(1);
+    expect(scenarios[0].steps[0].contractId).toBe('create');
   });
 
   test('parses multiple scenarios', () => {
     const source = createSourceFile(`
 const a = scenario({
   id: 'flow.a',
-  initial: {},
-  steps: [],
+  flow: () => [],
 });
 
 const b = scenario({
   id: 'flow.b',
-  initial: {},
-  steps: [],
+  flow: () => [],
 });
 `);
 
@@ -119,8 +98,7 @@ const myContract = define<S, I, E>({
 
 const s = scenario({
   id: 'test.resolve',
-  initial: {},
-  steps: [
+  flow: () => [
     step(myContract, { data: 1 }),
   ],
 });
@@ -134,8 +112,7 @@ const s = scenario({
     const source = createSourceFile(`
 const s = scenario({
   id: 'test.fallback',
-  initial: {},
-  steps: [
+  flow: () => [
     step(unknownContract, { data: 1 }),
   ],
 });
@@ -160,8 +137,7 @@ const s = scenario({
   test('returns empty for scenario() without id property', () => {
     const source = createSourceFile(`
 const s = scenario({
-  initial: {},
-  steps: [],
+  flow: () => [],
 });
 `);
     const scenarios = parseScenarios(source);
@@ -172,8 +148,7 @@ const s = scenario({
     const source = createSourceFile(`
 const s = scenario({
   id: 'test.propaccess',
-  initial: {},
-  steps: [
+  flow: () => [
     step(contracts.create, { data: 1 }),
   ],
 });
@@ -182,12 +157,11 @@ const s = scenario({
     expect(scenarios[0].steps[0].contractId).toBe('contracts.create');
   });
 
-  test('filters out non-step-call elements in steps array', () => {
+  test('filters out non-step-call elements in flow array', () => {
     const source = createSourceFile(`
 const s = scenario({
   id: 'test.filter',
-  initial: {},
-  steps: [
+  flow: () => [
     someVariable,
     step(create, { data: 1 }),
   ],
@@ -202,8 +176,7 @@ const s = scenario({
     const source = createSourceFile(`
 const s = scenario({
   id: 'test.noargs',
-  initial: {},
-  steps: [
+  flow: () => [
     step(create),
   ],
 });
@@ -216,8 +189,7 @@ const s = scenario({
     const source = createSourceFile(`
 export default scenario({
   id: 'test.novar',
-  initial: {},
-  steps: [],
+  flow: () => [],
 });
 `);
     const scenarios = parseScenarios(source);
@@ -226,12 +198,11 @@ export default scenario({
     expect(scenarios[0].description).toBeUndefined();
   });
 
-  test('handles non-step function calls in steps array', () => {
+  test('handles non-step function calls in flow array', () => {
     const source = createSourceFile(`
 const s = scenario({
   id: 'test.otherfn',
-  initial: {},
-  steps: [
+  flow: () => [
     otherFunction(create, {}),
   ],
 });
@@ -240,11 +211,22 @@ const s = scenario({
     expect(scenarios[0].steps).toHaveLength(0);
   });
 
-  test('handles scenario with steps but no steps property', () => {
+  test('returns empty steps when no flow property', () => {
     const source = createSourceFile(`
 const s = scenario({
-  id: 'test.nosteps',
-  initial: {},
+  id: 'test.noflow',
+});
+`);
+    const scenarios = parseScenarios(source);
+    expect(scenarios).toHaveLength(1);
+    expect(scenarios[0].steps).toHaveLength(0);
+  });
+
+  test('returns empty steps when flow is not an arrow function', () => {
+    const source = createSourceFile(`
+const s = scenario({
+  id: 'test.notarrow',
+  flow: someVariable,
 });
 `);
     const scenarios = parseScenarios(source);

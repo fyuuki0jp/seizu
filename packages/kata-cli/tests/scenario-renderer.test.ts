@@ -55,7 +55,6 @@ describe('renderScenarioSection', () => {
     expect(result).toContain('`cart.normalPurchase`');
     expect(result).toContain('`cart.create`');
     expect(result).toContain('`cart.addItem`');
-    expect(result).toContain('Success');
   });
 
   test('renders scenario section with Japanese locale', () => {
@@ -63,43 +62,15 @@ describe('renderScenarioSection', () => {
 
     expect(result).toContain('## シナリオ');
     expect(result).toContain('### 通常の購入フロー');
-    expect(result).toContain('成功');
     expect(result).toContain('操作');
-    expect(result).toContain('期待結果');
   });
 
-  test('renders expected error in step', () => {
-    const errorScenario: LinkedScenario = {
-      scenario: {
-        id: 'cart.duplicateCreate',
-        description: undefined,
-        variableName: 'dup',
-        steps: [
-          {
-            index: 0,
-            contractId: 'cart.create',
-            inputLiteral: "{ userId: 'alice' }",
-            expect: { error: 'AlreadyExists' },
-          },
-        ],
-        sourceFile: 'test.ts',
-        line: 1,
-      },
-      resolvedSteps: [
-        {
-          step: {
-            index: 0,
-            contractId: 'cart.create',
-            inputLiteral: "{ userId: 'alice' }",
-            expect: { error: 'AlreadyExists' },
-          },
-          contract: undefined,
-        },
-      ],
-    };
+  test('renders 3-column table (step, operation, input)', () => {
+    const result = renderScenarioSection([scenario], en);
 
-    const result = renderScenarioSection([errorScenario], en);
-    expect(result).toContain('Error: `AlreadyExists`');
+    expect(result).toContain('| # | Operation | Input |');
+    expect(result).toContain('|---|------|------|');
+    expect(result).not.toContain('Expected');
   });
 
   test('renders empty scenarios message', () => {
@@ -154,39 +125,5 @@ describe('renderScenarioSection', () => {
 
     const result = renderScenarioSection([noDescScenario], en);
     expect(result).toContain('### test.noDescription');
-  });
-
-  test('renders step with expect ok option', () => {
-    const okScenario: LinkedScenario = {
-      scenario: {
-        id: 'test.ok',
-        description: undefined,
-        variableName: undefined,
-        steps: [
-          {
-            index: 0,
-            contractId: 'op',
-            inputLiteral: '{ x: 1 }',
-            expect: 'ok',
-          },
-        ],
-        sourceFile: 'test.ts',
-        line: 1,
-      },
-      resolvedSteps: [
-        {
-          step: {
-            index: 0,
-            contractId: 'op',
-            inputLiteral: '{ x: 1 }',
-            expect: 'ok',
-          },
-          contract: undefined,
-        },
-      ],
-    };
-
-    const result = renderScenarioSection([okScenario], en);
-    expect(result).toContain('Success');
   });
 });

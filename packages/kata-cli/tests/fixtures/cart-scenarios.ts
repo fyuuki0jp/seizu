@@ -42,15 +42,12 @@ const addItem = define<
   }),
 });
 
-const emptyState: CartState = { exists: false, items: new Map() };
-
 /** 通常の購入フロー */
 export const normalPurchase = scenario({
   id: 'cart.normalPurchase',
   description: '通常の購入フロー',
-  initial: emptyState,
-  steps: [
-    step(createCart, { userId: 'alice' }),
+  flow: (input: { userId: string }) => [
+    step(createCart, { userId: input.userId }),
     step(addItem, { itemId: 'apple', qty: 3, price: 1.5 }),
     step(addItem, { itemId: 'banana', qty: 1, price: 0.8 }),
   ],
@@ -60,13 +57,8 @@ export const normalPurchase = scenario({
 export const duplicateCartError = scenario({
   id: 'cart.duplicateCreate',
   description: '重複カート作成の検出',
-  initial: emptyState,
-  steps: [
-    step(createCart, { userId: 'alice' }),
-    step(
-      createCart,
-      { userId: 'alice' },
-      { expect: { error: 'AlreadyExists' } }
-    ),
+  flow: (input: { userId: string }) => [
+    step(createCart, { userId: input.userId }),
+    step(createCart, { userId: input.userId }),
   ],
 });

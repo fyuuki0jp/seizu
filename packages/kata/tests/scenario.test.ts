@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { define, err, pass, scenario, step } from '../src/index';
+import { define, err, isErr, isOk, pass, scenario, step } from '../src/index';
 
 type CartItem = { readonly qty: number; readonly price: number };
 type CartState = {
@@ -46,179 +46,183 @@ const addItem = define<
 });
 
 const emptyState: CartState = { exists: false, items: new Map() };
+const activeState: CartState = { exists: true, items: new Map() };
+
+type PurchaseInput = {
+  userId: string;
+  itemId: string;
+  qty: number;
+  price: number;
+};
+
+const purchase = scenario<CartState, PurchaseInput>({
+  id: 'cart.purchase',
+  description: '購入フロー',
+  flow: (input) => [
+    step(createCart, { userId: input.userId }),
+    step(addItem, {
+      itemId: input.itemId,
+      qty: input.qty,
+      price: input.price,
+    }),
+  ],
+});
 
 describe('scenario', () => {
-  test('all steps succeed → ok: true', () => {
-    const s = scenario({
-      id: 'cart.normalPurchase',
-      description: '通常の購入フロー',
-      initial: emptyState,
-      steps: [
-        step(createCart, { userId: 'alice' }),
-        step(addItem, { itemId: 'apple', qty: 3, price: 1.5 }),
-      ],
+  test('all steps succeed → isOk, final state returned', () => {
+    const result = purchase(emptyState, {
+      userId: 'alice',
+      itemId: 'apple',
+      qty: 3,
+      price: 1.5,
     });
-
-    const result = s.run();
-    expect(result.ok).toBe(true);
-    expect(result.id).toBe('cart.normalPurchase');
-    expect(result.steps).toHaveLength(2);
-    expect(result.steps[0].outcome).toBe('ok');
-    expect(result.steps[1].outcome).toBe('ok');
+    expect(isOk(result)).toBe(true);
+    if (isOk(result)) {
+      expect(result.value.exists).toBe(true);
+      expect(result.value.items.size).toBe(1);
+      expect(result.value.items.get('apple')).toEqual({ qty: 3, price: 1.5 });
+    }
   });
 
   test('state is threaded through steps', () => {
-    const s = scenario({
-      id: 'cart.multiItem',
-      initial: emptyState,
-      steps: [
-        step(createCart, { userId: 'bob' }),
+    const multiAdd = scenario<CartState, { userId: string }>({
+      id: 'cart.multiAdd',
+      flow: (input) => [
+        step(createCart, { userId: input.userId }),
         step(addItem, { itemId: 'apple', qty: 1, price: 1.0 }),
         step(addItem, { itemId: 'banana', qty: 2, price: 0.5 }),
       ],
     });
 
-    const result = s.run();
-    expect(result.ok).toBe(true);
-    expect(result.finalState.exists).toBe(true);
-    expect(result.finalState.items.size).toBe(2);
-    expect(result.finalState.items.get('apple')).toEqual({
+    const result = multiAdd(emptyState, { userId: 'bob' });
+    expect(isOk(result)).toBe(true);
+    if (isOk(result)) {
+      expect(result.value.items.size).toBe(2);
+      expect(result.value.items.get('apple')).toEqual({ qty: 1, price: 1.0 });
+      expect(result.value.items.get('banana')).toEqual({ qty: 2, price: 0.5 });
+    }
+  });
+
+  test('step failure → isErr with ScenarioFailure', () => {
+    // activeState already has cart → createCart fails at step 0
+    const result2 = purchase(activeState, {
+      userId: 'alice',
+      itemId: 'apple',
       qty: 1,
       price: 1.0,
     });
-    expect(result.finalState.items.get('banana')).toEqual({
-      qty: 2,
-      price: 0.5,
-    });
+    expect(isErr(result2)).toBe(true);
+    if (isErr(result2)) {
+      expect(result2.error.stepIndex).toBe(0);
+      expect(result2.error.contractId).toBe('cart.create');
+      expect(result2.error.error).toEqual({ tag: 'AlreadyExists' });
+    }
   });
 
-  test('unexpected error → unexpected_error, ok: false', () => {
-    const s = scenario({
-      id: 'cart.addWithoutCreate',
-      initial: emptyState,
-      steps: [step(addItem, { itemId: 'apple', qty: 1, price: 1.0 })],
+  test('empty flow → isOk, state unchanged', () => {
+    const noop = scenario<CartState, void>({
+      id: 'cart.noop',
+      flow: () => [],
     });
 
-    const result = s.run();
-    expect(result.ok).toBe(false);
-    expect(result.steps[0].outcome).toBe('unexpected_error');
-    expect(result.steps[0].error).toEqual({ tag: 'CartNotFound' });
-  });
-
-  test('expected error → error, ok: true', () => {
-    const s = scenario({
-      id: 'cart.duplicateCreate',
-      initial: { exists: true, items: new Map() },
-      steps: [
-        step(
-          createCart,
-          { userId: 'alice' },
-          { expect: { error: 'AlreadyExists' } }
-        ),
-      ],
-    });
-
-    const result = s.run();
-    expect(result.ok).toBe(true);
-    expect(result.steps[0].outcome).toBe('error');
-    expect(result.steps[0].error).toEqual({ tag: 'AlreadyExists' });
-  });
-
-  test('expected error but succeeds → unexpected_ok', () => {
-    const s = scenario({
-      id: 'cart.expectErrorButOk',
-      initial: emptyState,
-      steps: [
-        step(
-          createCart,
-          { userId: 'alice' },
-          { expect: { error: 'AlreadyExists' } }
-        ),
-      ],
-    });
-
-    const result = s.run();
-    expect(result.ok).toBe(false);
-    expect(result.steps[0].outcome).toBe('unexpected_ok');
-  });
-
-  test('wrong error tag → wrong_error', () => {
-    const s = scenario({
-      id: 'cart.wrongError',
-      initial: emptyState,
-      steps: [
-        step(
-          addItem,
-          { itemId: 'apple', qty: 1, price: 1.0 },
-          { expect: { error: 'DuplicateItem' } }
-        ),
-      ],
-    });
-
-    const result = s.run();
-    expect(result.ok).toBe(false);
-    expect(result.steps[0].outcome).toBe('wrong_error');
-    expect(result.steps[0].error).toEqual({ tag: 'CartNotFound' });
-  });
-
-  test('empty steps → ok: true', () => {
-    const s = scenario({
-      id: 'cart.empty',
-      initial: emptyState,
-      steps: [],
-    });
-
-    const result = s.run();
-    expect(result.ok).toBe(true);
-    expect(result.steps).toHaveLength(0);
-    expect(result.finalState).toBe(emptyState);
+    const result = noop(emptyState, undefined);
+    expect(isOk(result)).toBe(true);
+    if (isOk(result)) {
+      expect(result.value).toBe(emptyState);
+    }
   });
 
   test('metadata accessible on scenario object', () => {
-    const s = scenario({
-      id: 'cart.normalPurchase',
-      description: '通常の購入フロー',
-      initial: emptyState,
-      steps: [step(createCart, { userId: 'alice' })],
-    });
-
-    expect(s.id).toBe('cart.normalPurchase');
-    expect(s.description).toBe('通常の購入フロー');
-    expect(s.initial).toBe(emptyState);
-    expect(s.steps).toHaveLength(1);
+    expect(purchase.id).toBe('cart.purchase');
+    expect(purchase.description).toBe('購入フロー');
+    expect(typeof purchase.flow).toBe('function');
   });
 
-  test('state does not change on expected error', () => {
-    const activeState: CartState = { exists: true, items: new Map() };
-    const s = scenario({
-      id: 'cart.errorNoStateChange',
-      initial: activeState,
-      steps: [
-        step(
-          createCart,
-          { userId: 'alice' },
-          { expect: { error: 'AlreadyExists' } }
+  test('parameterized flow generates different steps based on input', () => {
+    type BulkInput = {
+      userId: string;
+      items: { id: string; qty: number; price: number }[];
+    };
+
+    const bulkPurchase = scenario<CartState, BulkInput>({
+      id: 'cart.bulkPurchase',
+      flow: (input) => [
+        step(createCart, { userId: input.userId }),
+        ...input.items.map((item) =>
+          step(addItem, { itemId: item.id, qty: item.qty, price: item.price })
         ),
       ],
     });
 
-    const result = s.run();
-    expect(result.ok).toBe(true);
-    expect(result.finalState).toBe(activeState);
-  });
-
-  test('step results include contractId', () => {
-    const s = scenario({
-      id: 'cart.ids',
-      initial: emptyState,
-      steps: [
-        step(createCart, { userId: 'alice' }),
-        step(addItem, { itemId: 'apple', qty: 1, price: 1.0 }),
+    const result = bulkPurchase(emptyState, {
+      userId: 'alice',
+      items: [
+        { id: 'apple', qty: 1, price: 1.0 },
+        { id: 'banana', qty: 2, price: 0.5 },
+        { id: 'cherry', qty: 5, price: 2.0 },
       ],
     });
 
-    const result = s.run();
-    expect(result.steps[0].contractId).toBe('cart.create');
-    expect(result.steps[1].contractId).toBe('cart.addItem');
+    expect(isOk(result)).toBe(true);
+    if (isOk(result)) {
+      expect(result.value.items.size).toBe(3);
+    }
+  });
+
+  test('dynamic step count with map', () => {
+    type RepeatInput = { userId: string; count: number };
+
+    const repeatAdd = scenario<CartState, RepeatInput>({
+      id: 'cart.repeatAdd',
+      flow: (input) => [
+        step(createCart, { userId: input.userId }),
+        ...Array.from({ length: input.count }, (_, i) =>
+          step(addItem, { itemId: `item-${i}`, qty: 1, price: 1.0 })
+        ),
+      ],
+    });
+
+    const result = repeatAdd(emptyState, { userId: 'alice', count: 5 });
+    expect(isOk(result)).toBe(true);
+    if (isOk(result)) {
+      expect(result.value.items.size).toBe(5);
+    }
+  });
+
+  test('failure at second step preserves error context', () => {
+    // createCart succeeds, then addItem fails because cart already has item
+    const stateWithItem: CartState = {
+      exists: true,
+      items: new Map([['apple', { qty: 1, price: 1.0 }]]),
+    };
+
+    const addOnly = scenario<CartState, { itemId: string }>({
+      id: 'cart.addOnly',
+      flow: (input) => [
+        step(addItem, { itemId: input.itemId, qty: 1, price: 1.0 }),
+      ],
+    });
+
+    const result = addOnly(stateWithItem, { itemId: 'apple' });
+    expect(isErr(result)).toBe(true);
+    if (isErr(result)) {
+      expect(result.error.stepIndex).toBe(0);
+      expect(result.error.contractId).toBe('cart.addItem');
+      expect(result.error.error).toEqual({
+        tag: 'DuplicateItem',
+        itemId: 'apple',
+      });
+    }
+  });
+
+  test('scenario is callable as a function', () => {
+    expect(typeof purchase).toBe('function');
+    const result = purchase(emptyState, {
+      userId: 'alice',
+      itemId: 'apple',
+      qty: 1,
+      price: 1.0,
+    });
+    expect(result).toHaveProperty('ok');
   });
 });

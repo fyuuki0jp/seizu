@@ -44,7 +44,7 @@ function parseScenarioCall(
   const id = extractStringProperty(arg, 'id');
   if (!id) return undefined;
 
-  const steps = extractSteps(arg, sourceFile, contractVarMap);
+  const steps = extractStepsFromFlow(arg, sourceFile, contractVarMap);
   const variableName = findEnclosingVariableName(call);
   const description = variableName
     ? extractVariableTSDoc(variableName, sourceFile)
@@ -64,19 +64,50 @@ function parseScenarioCall(
   };
 }
 
-function extractSteps(
+/**
+ * Extract steps from the `flow:` arrow function property.
+ * Supports both concise body `(input) => [step(...)]` and block body `(input) => { return [...]; }`.
+ */
+function extractStepsFromFlow(
   obj: ts.ObjectLiteralExpression,
   sourceFile: ts.SourceFile,
   contractVarMap: Map<string, string>
 ): ParsedScenarioStep[] {
-  const stepsArray = findArrayProperty(obj, 'steps');
-  if (!stepsArray) return [];
+  const flowFn = findArrowFunctionProperty(obj, 'flow');
+  if (!flowFn) return [];
 
-  return stepsArray.elements
+  const arrayExpr = findArrayInArrowBody(flowFn.body);
+  if (!arrayExpr) return [];
+
+  return arrayExpr.elements
     .map((element, index) =>
       parseStepCall(element, index, sourceFile, contractVarMap)
     )
     .filter((s): s is ParsedScenarioStep => s !== undefined);
+}
+
+function findArrayInArrowBody(
+  body: ts.ConciseBody
+): ts.ArrayLiteralExpression | undefined {
+  // Concise body: (input) => [step(...)]
+  if (ts.isArrayLiteralExpression(body)) {
+    return body;
+  }
+
+  // Block body: (input) => { return [...]; }
+  if (ts.isBlock(body)) {
+    for (const stmt of body.statements) {
+      if (
+        ts.isReturnStatement(stmt) &&
+        stmt.expression &&
+        ts.isArrayLiteralExpression(stmt.expression)
+      ) {
+        return stmt.expression;
+      }
+    }
+  }
+
+  return undefined;
 }
 
 function parseStepCall(
@@ -105,39 +136,7 @@ function parseStepCall(
   // Second arg: input literal
   const inputLiteral = args[1].getText(sourceFile);
 
-  // Third arg (optional): options with expect
-  let expect: 'ok' | { error: string } | undefined;
-  if (args.length >= 3 && ts.isObjectLiteralExpression(args[2])) {
-    expect = extractExpect(args[2]);
-  }
-
-  return { index, contractId, inputLiteral, expect };
-}
-
-function extractExpect(
-  obj: ts.ObjectLiteralExpression
-): 'ok' | { error: string } | undefined {
-  for (const prop of obj.properties) {
-    if (
-      ts.isPropertyAssignment(prop) &&
-      ts.isIdentifier(prop.name) &&
-      prop.name.text === 'expect'
-    ) {
-      if (
-        ts.isStringLiteral(prop.initializer) &&
-        prop.initializer.text === 'ok'
-      ) {
-        return 'ok';
-      }
-      if (ts.isObjectLiteralExpression(prop.initializer)) {
-        const errorTag = extractStringProperty(prop.initializer, 'error');
-        if (errorTag) {
-          return { error: errorTag };
-        }
-      }
-    }
-  }
-  return undefined;
+  return { index, contractId, inputLiteral };
 }
 
 /**
@@ -188,17 +187,17 @@ function extractStringProperty(
   return undefined;
 }
 
-function findArrayProperty(
+function findArrowFunctionProperty(
   obj: ts.ObjectLiteralExpression,
   name: string
-): ts.ArrayLiteralExpression | undefined {
+): ts.ArrowFunction | undefined {
   for (const prop of obj.properties) {
     if (
       ts.isPropertyAssignment(prop) &&
       ts.isIdentifier(prop.name) &&
       prop.name.text === name
     ) {
-      if (ts.isArrayLiteralExpression(prop.initializer)) {
+      if (ts.isArrowFunction(prop.initializer)) {
         return prop.initializer;
       }
     }
