@@ -1,5 +1,9 @@
 import { isOk } from 'kata';
-import { renderMarkdownScenario } from '../../domain/render';
+import {
+  renderContractSections,
+  renderCoverageSection,
+  renderMarkdownScenario,
+} from '../../domain/render';
 import type { CoverageReport } from '../analyzer/coverage-types';
 import type { Messages } from '../i18n/types';
 import type { DocumentModel } from '../types';
@@ -18,10 +22,11 @@ export function renderMarkdown(
   model: DocumentModel,
   options: RenderOptions
 ): string {
+  const flowEnabled = options.flowEnabled ?? true;
   const result = renderMarkdownScenario([], {
     title: model.title,
     description: model.description,
-    flowEnabled: options.flowEnabled ?? true,
+    flowEnabled,
     contracts: model.contracts,
     scenarios: model.scenarios,
     messages: options.messages,
@@ -29,9 +34,24 @@ export function renderMarkdown(
   });
 
   if (!isOk(result)) {
-    // Keep fallback deterministic and visible when render contract preconditions fail.
-    return `# ${model.title}\n\n`;
+    throw new Error(
+      `render.markdown failed at step ${result.error.stepIndex}: ${result.error.contractId}`
+    );
   }
 
-  return result.value.join('\n').replace(/\n{3,}/g, '\n\n');
+  let lines = renderContractSections(result.value, {
+    contracts: model.contracts,
+    hasScenarios: model.scenarios.length > 0,
+    messages: options.messages,
+    flowEnabled,
+  });
+
+  if (options.coverageReport) {
+    lines = renderCoverageSection(lines, {
+      report: options.coverageReport,
+      messages: options.messages,
+    });
+  }
+
+  return lines.join('\n').replace(/\n{3,}/g, '\n\n');
 }

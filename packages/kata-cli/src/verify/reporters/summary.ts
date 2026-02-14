@@ -1,5 +1,14 @@
 import type { CheckResult, ContractResult, VerifyResult } from 'kata/verify';
 
+function safeStringify(value: unknown, spacing?: number): string {
+  try {
+    const serialized = JSON.stringify(value, null, spacing);
+    return serialized ?? String(value);
+  } catch {
+    return String(value);
+  }
+}
+
 function formatCheck(check: CheckResult): string {
   const icon = check.status === 'passed' ? '\u2713' : '\u2717';
   const line = `      ${icon} ${check.id.padEnd(24)} ${check.runs} runs`;
@@ -25,9 +34,9 @@ function formatValue(value: unknown): string {
   if (value instanceof Map) {
     const entries = [...value.entries()];
     if (entries.length === 0) return 'Map(0) {}';
-    return `Map(${entries.length}) { ${entries.map(([k, v]) => `${JSON.stringify(k)} => ${JSON.stringify(v)}`).join(', ')} }`;
+    return `Map(${entries.length}) { ${entries.map(([k, v]) => `${safeStringify(k)} => ${safeStringify(v)}`).join(', ')} }`;
   }
-  return JSON.stringify(value);
+  return safeStringify(value);
 }
 
 function describeViolation(check: CheckResult): string {

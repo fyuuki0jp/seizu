@@ -1,26 +1,24 @@
 import { resolve } from 'node:path';
 import type { CAC } from 'cac';
+import { isOk } from 'kata';
+import { ConfigError, loadConfig } from '../config';
 import { formatCoverageReport } from '../coverage/reporters/terminal';
-import { analyzeCoverage } from '../doc/analyzer/coverage-analyzer';
-import { ConfigError, loadConfig } from '../doc/config';
 import { getMessages } from '../doc/i18n/index';
 import type { Locale } from '../doc/i18n/types';
-import { linkContractsToTests } from '../doc/linker/contract-test-linker';
-import { parseContracts } from '../doc/parser/contract-parser';
 import {
   createProgramFromFiles,
   resolveGlobs,
 } from '../doc/parser/source-resolver';
-import { parseTestSuites } from '../doc/parser/test-parser';
-import type { ParsedContract, ParsedTestSuite } from '../doc/types';
+import { coverageGenerate } from '../domain/pipeline';
+import type { DocPipelineState, SourceFileEntry } from '../domain/types';
 
 export function registerCoverageCommand(cli: CAC): void {
   cli
     .command('coverage [...contracts]', 'Analyze test coverage for contracts')
     .option('--config <path>', 'Config file path', {
-      default: 'kata-doc.config.ts',
+      default: 'kata.config.ts',
     })
-    .option('--locale <locale>', 'Locale: en or ja', { default: 'en' })
+    .option('--locale <locale>', 'Locale: en or ja')
     .option('--json', 'Output as JSON', { default: false })
     .action(async (contracts: string[], options) => {
       try {
@@ -38,6 +36,7 @@ export function registerCoverageCommand(cli: CAC): void {
         if (allFiles.length === 0) {
           console.log('No source files found.');
           process.exit(0);
+          return;
         }
 
         const tsconfigPath = config.tsconfig
@@ -45,29 +44,70 @@ export function registerCoverageCommand(cli: CAC): void {
           : undefined;
         const program = createProgramFromFiles(allFiles, tsconfigPath);
 
-        let allContracts: ParsedContract[] = [];
+        const sourceFiles: SourceFileEntry[] = [];
         for (const filePath of contractFiles) {
           const sourceFile = program.getSourceFile(filePath);
           if (sourceFile) {
-            allContracts.push(...parseContracts(sourceFile));
+            sourceFiles.push({
+              path: filePath,
+              kind: 'contract',
+              sourceFile,
+            });
           }
         }
 
-        const allTestSuites: ParsedTestSuite[] = [];
         for (const filePath of testFiles) {
           const sourceFile = program.getSourceFile(filePath);
           if (sourceFile) {
-            allTestSuites.push(...parseTestSuites(sourceFile));
+            sourceFiles.push({
+              path: filePath,
+              kind: 'test',
+              sourceFile,
+            });
           }
         }
 
-        if (contracts.length > 0) {
-          const filterSet = new Set(contracts);
-          allContracts = allContracts.filter((c) => filterSet.has(c.id));
+        if (sourceFiles.length === 0) {
+          console.log('No source files found.');
+          process.exit(0);
+          return;
         }
 
-        const linked = linkContractsToTests(allContracts, allTestSuites);
-        const report = analyzeCoverage(linked);
+        const filterIds = contracts.length > 0 ? new Set(contracts) : undefined;
+        const initialState: DocPipelineState = {
+          title: config.title,
+          description: config.description,
+          flowEnabled: config.flow ?? true,
+          messages,
+          sourceFiles: [],
+          contracts: [],
+          scenarios: [],
+          testSuites: [],
+          filtered: [],
+          linked: [],
+          linkedScenarios: [],
+          coverageReport: undefined,
+          markdown: '',
+        };
+
+        const result = coverageGenerate(initialState, {
+          sourceFiles,
+          filterIds,
+        });
+        if (!isOk(result)) {
+          console.error(
+            `Pipeline failed at step ${result.error.stepIndex}: ${result.error.contractId}`
+          );
+          process.exit(1);
+          return;
+        }
+
+        const report = result.value.coverageReport;
+        if (!report) {
+          console.error('Coverage report was not generated.');
+          process.exit(1);
+          return;
+        }
 
         if (options.json) {
           console.log(JSON.stringify(report, null, 2));

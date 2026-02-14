@@ -280,4 +280,102 @@ describe('analyzeCoverage', () => {
     const report = analyzeCoverage(linked);
     expect(report.contracts[0].errorTags[0].hasFailureTest).toBe(true);
   });
+
+  test('keeps one decimal precision for repeating ratios', () => {
+    const linked: LinkedContract[] = [
+      {
+        contract: {
+          id: 'a',
+          description: undefined,
+          typeInfo: {
+            stateTypeName: 'S',
+            inputTypeName: 'I',
+            errorTypeName: 'E',
+          },
+          guards: [
+            {
+              index: 0,
+              description: 'g1',
+              errorTags: ['E1'],
+              kind: 'inline',
+              referenceName: undefined,
+            },
+          ],
+          conditions: [],
+          invariants: [],
+          variableName: undefined,
+          sourceFile: 'a.ts',
+          line: 1,
+        },
+        testSuite: {
+          contractId: 'a',
+          tests: [
+            {
+              name: 'returns E1',
+              classification: 'failure',
+              sourceFile: 'a.test.ts',
+              line: 1,
+            },
+          ],
+          sourceFile: 'a.test.ts',
+        },
+      },
+      {
+        contract: {
+          id: 'b',
+          description: undefined,
+          typeInfo: {
+            stateTypeName: 'S',
+            inputTypeName: 'I',
+            errorTypeName: 'E',
+          },
+          guards: [
+            {
+              index: 0,
+              description: 'g2',
+              errorTags: ['E2'],
+              kind: 'inline',
+              referenceName: undefined,
+            },
+          ],
+          conditions: [],
+          invariants: [],
+          variableName: undefined,
+          sourceFile: 'b.ts',
+          line: 1,
+        },
+        testSuite: undefined,
+      },
+      {
+        contract: {
+          id: 'c',
+          description: undefined,
+          typeInfo: {
+            stateTypeName: 'S',
+            inputTypeName: 'I',
+            errorTypeName: 'E',
+          },
+          guards: [
+            {
+              index: 0,
+              description: 'g3',
+              errorTags: ['E3'],
+              kind: 'inline',
+              referenceName: undefined,
+            },
+          ],
+          conditions: [],
+          invariants: [],
+          variableName: undefined,
+          sourceFile: 'c.ts',
+          line: 1,
+        },
+        testSuite: undefined,
+      },
+    ];
+
+    const report = analyzeCoverage(linked);
+    expect(report.summary.contractCoveragePercent).toBe(33.3);
+    expect(report.summary.errorTagCoveragePercent).toBe(33.3);
+  });
 });

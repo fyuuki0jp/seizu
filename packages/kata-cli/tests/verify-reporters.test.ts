@@ -283,6 +283,31 @@ describe('summary reporter', () => {
     const output = summary(result);
     expect(output).toContain('Map(1)');
   });
+
+  test('formats undefined counterexample values safely', () => {
+    const result = makeVerifyResult({
+      success: false,
+      results: [
+        makeContractResult({
+          checks: [
+            makeCheck({
+              status: 'failed',
+              violation: 'pre_not_guarded',
+              counterexample: {
+                state: undefined,
+                input: undefined,
+              },
+            }),
+          ],
+        }),
+      ],
+      summary: { contracts: 1, checks: 1, passed: 0, failed: 1 },
+    });
+
+    const output = summary(result);
+    expect(output).toContain('state = undefined');
+    expect(output).toContain('input = undefined');
+  });
 });
 
 describe('replay reporter', () => {
@@ -474,5 +499,30 @@ describe('replay reporter', () => {
 
     const output = replay(result);
     expect(output).toContain('VIOLATION');
+  });
+
+  test('formats undefined replay values safely', () => {
+    const result = makeVerifyResult({
+      success: false,
+      results: [
+        makeContractResult({
+          checks: [
+            makeCheck({
+              status: 'failed',
+              violation: 'pre_not_guarded',
+              counterexample: {
+                state: undefined,
+                input: undefined,
+              },
+            }),
+          ],
+        }),
+      ],
+      summary: { contracts: 1, checks: 1, passed: 0, failed: 1 },
+    });
+
+    const output = replay(result);
+    expect(output).toContain('const state = undefined;');
+    expect(output).toContain('const input = undefined;');
   });
 });

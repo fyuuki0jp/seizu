@@ -2,9 +2,10 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import type { CAC } from 'cac';
 import { isOk } from 'kata';
-import { ConfigError, loadConfig } from '../doc/config';
+import { ConfigError, loadConfig } from '../config';
 import type { FlowArtifact } from '../doc/flow';
 import { getMessages } from '../doc/i18n/index';
+import type { Locale } from '../doc/i18n/types';
 import {
   createProgramFromFiles,
   resolveGlobs,
@@ -17,11 +18,11 @@ export function registerDocCommand(cli: CAC): void {
   cli
     .command('doc [...contracts]', 'Generate contract documentation')
     .option('--config <path>', 'Config file path', {
-      default: 'kata-doc.config.ts',
+      default: 'kata.config.ts',
     })
     .option('--output <path>', 'Output file path (overrides config)')
     .option('--title <title>', 'Document title (overrides config)')
-    .option('--locale <locale>', 'Locale: en or ja', { default: 'en' })
+    .option('--locale <locale>', 'Locale: en or ja')
     .option('--coverage', 'Include coverage summary', { default: false })
     .option('--flow', 'Include flow visualization')
     .option('--no-flow', 'Disable flow visualization')
@@ -34,6 +35,7 @@ export function registerDocCommand(cli: CAC): void {
     .action(async (contracts: string[], options) => {
       try {
         const { config } = await loadConfig(options.config);
+        const locale = (options.locale ?? config.locale ?? 'en') as Locale;
 
         const flowEnabled =
           typeof options.flow === 'boolean'
@@ -44,8 +46,8 @@ export function registerDocCommand(cli: CAC): void {
           ...config,
           ...(options.output ? { output: options.output } : {}),
           ...(options.title ? { title: options.title } : {}),
-          ...(options.locale ? { locale: options.locale } : {}),
           ...(options.coverage ? { coverage: true } : {}),
+          locale,
           flow: flowEnabled,
           ...(options.flowDebugOutput
             ? { flowDebugOutput: options.flowDebugOutput }
@@ -53,7 +55,7 @@ export function registerDocCommand(cli: CAC): void {
         };
 
         const basePath = process.cwd();
-        const messages = getMessages(effectiveConfig.locale ?? 'en');
+        const messages = getMessages(locale);
         const contractFiles = resolveGlobs(effectiveConfig.contracts, basePath);
         const scenarioFiles = effectiveConfig.scenarios
           ? resolveGlobs(effectiveConfig.scenarios, basePath)

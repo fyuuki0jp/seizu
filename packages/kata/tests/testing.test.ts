@@ -20,6 +20,12 @@ describe('expectOk', () => {
     expect(() => expectOk(result)).toThrow('Expected ok, got err');
     expect(() => expectOk(result)).toThrow('NotFound');
   });
+
+  test('throws with non-JSON-serializable error payload', () => {
+    const result = err(10n);
+    expect(() => expectOk(result)).toThrow('Expected ok, got err');
+    expect(() => expectOk(result)).toThrow('10');
+  });
 });
 
 describe('expectErr', () => {
@@ -39,5 +45,11 @@ describe('expectErr', () => {
     const result = ok(42);
     expect(() => expectErr(result)).toThrow('Expected err, got ok');
     expect(() => expectErr(result)).toThrow('42');
+  });
+
+  test('throws with function value payload', () => {
+    const result = ok(() => 'hello');
+    expect(() => expectErr(result)).toThrow('Expected err, got ok');
+    expect(() => expectErr(result)).toThrow('() => "hello"');
   });
 });

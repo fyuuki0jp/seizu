@@ -1,6 +1,6 @@
 import type { CAC } from 'cac';
 import { verify } from 'kata/verify';
-import { ConfigError, loadConfig } from '../verify/config';
+import { ConfigError, loadConfig } from '../config';
 import { json } from '../verify/reporters/json';
 import { replay } from '../verify/reporters/replay';
 import { summary } from '../verify/reporters/summary';
@@ -15,20 +15,32 @@ export function registerVerifyCommand(cli: CAC): void {
       default: 'summary',
     })
     .option('--runs <count>', 'Number of PBT runs', { default: 100 })
-    .option('--config <path>', 'Config file path')
+    .option('--config <path>', 'Config file path', {
+      default: 'kata.config.ts',
+    })
     .option('--seed <seed>', 'Random seed for reproduction')
     .option('--path <path>', 'Counterexample path for reproduction')
     .action(async (contracts: string[], options) => {
       try {
         const { config } = await loadConfig(options.config);
+        const verifyConfig = config.verify;
 
-        let entries = config.contracts;
+        let entries = verifyConfig.contracts;
         if (contracts.length > 0) {
           entries = entries.filter((e) => contracts.includes(e.contract.id));
           if (entries.length === 0) {
             console.error(`No contracts matched: ${contracts.join(', ')}`);
             process.exit(2);
+            return;
           }
+        }
+
+        const reporterName = options.reporter as ReporterName;
+        const reporter = reporters[reporterName];
+        if (!reporter) {
+          console.error(`Unknown reporter: ${options.reporter}`);
+          process.exit(2);
+          return;
         }
 
         const result = verify(entries, {
@@ -37,8 +49,6 @@ export function registerVerifyCommand(cli: CAC): void {
           path: options.path,
         });
 
-        const reporterName = options.reporter as ReporterName;
-        const reporter = reporters[reporterName] ?? reporters.summary;
         console.log(reporter(result));
 
         process.exit(result.success ? 0 : 1);

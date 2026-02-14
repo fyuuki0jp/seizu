@@ -10,9 +10,14 @@ import type {
   ParsedScenario,
   ParsedTestSuite,
 } from '../doc/types';
-import { renderMarkdownScenario } from './render';
+import {
+  renderContractSections,
+  renderCoverageSection,
+  renderMarkdownScenario,
+} from './render';
 import type {
   AnalyzeInput,
+  CoverageGenerateInput,
   DocPipelineState,
   FilterInput,
   GenerateInput,
@@ -61,13 +66,10 @@ export const docParse = define<DocPipelineState, ParseInput, PipelineError>({
     };
   },
   post: [
-    /** Contracts and scenarios arrays are populated */
-    (_before, after) =>
-      after.contracts.length >= 0 && after.scenarios.length >= 0,
-  ],
-  invariant: [
-    /** Title is preserved */
-    (state) => state.title.length >= 0,
+    /** Source file paths are tracked uniquely in the pipeline state. */
+    (_before, after, input) =>
+      after.sourceFiles.length ===
+      new Set(input.sourceFiles.map((entry) => entry.path)).size,
   ],
 });
 
@@ -92,10 +94,6 @@ export const docFilter = define<DocPipelineState, FilterInput, never>({
     (_before, after) =>
       after.filtered.every((f) => after.contracts.some((c) => c.id === f.id)),
   ],
-  invariant: [
-    /** Title is preserved */
-    (state) => state.title.length >= 0,
-  ],
 });
 
 // === doc.link ===
@@ -111,10 +109,6 @@ export const docLink = define<DocPipelineState, Record<string, never>, never>({
   post: [
     /** Every filtered contract has a corresponding linked entry */
     (_before, after) => after.linked.length === after.filtered.length,
-  ],
-  invariant: [
-    /** Filtered contracts are not lost */
-    (state) => state.filtered.length >= 0,
   ],
 });
 
@@ -135,10 +129,6 @@ export const docAnalyze = define<DocPipelineState, AnalyzeInput, never>({
     (_before, after, input) =>
       input.enabled ? after.coverageReport !== undefined : true,
   ],
-  invariant: [
-    /** Linked contracts are preserved */
-    (state) => state.linked.length >= 0,
-  ],
 });
 
 // === doc.render ===
@@ -158,22 +148,33 @@ export const docRender = define<DocPipelineState, Record<string, never>, never>(
         coverageReport: state.coverageReport,
       });
 
-      if (isOk(result)) {
-        const markdown = result.value.join('\n').replace(/\n{3,}/g, '\n\n');
-        return { ...state, markdown };
+      if (!isOk(result)) {
+        throw new Error(
+          `render.markdown failed at step ${result.error.stepIndex}: ${result.error.contractId}`
+        );
       }
 
-      return { ...state, markdown: '' };
+      let lines = renderContractSections(result.value, {
+        contracts: state.linked,
+        hasScenarios: state.linkedScenarios.length > 0,
+        messages: state.messages,
+        flowEnabled: state.flowEnabled,
+      });
+
+      if (state.coverageReport) {
+        lines = renderCoverageSection(lines, {
+          report: state.coverageReport,
+          messages: state.messages,
+        });
+      }
+
+      const markdown = lines.join('\n').replace(/\n{3,}/g, '\n\n');
+      return { ...state, markdown };
     },
     post: [
       /** Non-empty linked state produces non-empty markdown */
       (_before, after) =>
         after.linked.length > 0 ? after.markdown.length > 0 : true,
-    ],
-    invariant: [
-      /** Title appears in markdown when contracts exist */
-      (state) =>
-        state.linked.length === 0 || state.markdown.includes(state.title),
     ],
   }
 );
@@ -191,5 +192,23 @@ export const docGenerate = scenario<DocPipelineState, GenerateInput>({
     step(docLink, {} as Record<string, never>),
     step(docAnalyze, { enabled: input.coverageEnabled }),
     step(docRender, {} as Record<string, never>),
+  ],
+});
+
+// === coverage.generate scenario ===
+
+export const coverageGenerate = scenario<
+  DocPipelineState,
+  CoverageGenerateInput
+>({
+  id: 'coverage.generate',
+  description: 'カバレッジ分析パイプライン',
+  flow: (input) => [
+    step(docParse, { sourceFiles: input.sourceFiles }),
+    step(docFilter, {
+      filterIds: input.filterIds,
+    } as FilterInput),
+    step(docLink, {} as Record<string, never>),
+    step(docAnalyze, { enabled: true }),
   ],
 });

@@ -1,12 +1,21 @@
 import type { CheckResult, ContractResult, VerifyResult } from 'kata/verify';
 
+function safeStringify(value: unknown, spacing?: number): string {
+  try {
+    const serialized = JSON.stringify(value, null, spacing);
+    return serialized ?? String(value);
+  } catch {
+    return String(value);
+  }
+}
+
 function formatValue(value: unknown): string {
   if (value instanceof Map) {
     const entries = [...value.entries()];
     if (entries.length === 0) return 'new Map()';
-    return `new Map(${JSON.stringify(entries)})`;
+    return `new Map(${safeStringify(entries)})`;
   }
-  return JSON.stringify(value, null, 2);
+  return safeStringify(value, 2);
 }
 
 function violationLabel(violation: CheckResult['violation']): string {

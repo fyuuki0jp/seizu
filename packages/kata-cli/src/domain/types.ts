@@ -45,8 +45,7 @@ export type PipelineError = { readonly tag: 'NoSourceFiles' };
 export type RenderError =
   | { readonly tag: 'TitleEmpty' }
   | { readonly tag: 'InsufficientContracts' }
-  | { readonly tag: 'NoScenarios' }
-  | { readonly tag: 'NoReport' };
+  | { readonly tag: 'NoScenarios' };
 
 // === Reporter Errors ===
 
@@ -74,6 +73,11 @@ export interface GenerateInput {
   readonly coverageEnabled: boolean;
 }
 
+export interface CoverageGenerateInput {
+  readonly sourceFiles: readonly SourceFileEntry[];
+  readonly filterIds?: ReadonlySet<string>;
+}
+
 // === Render Input Types ===
 
 export interface TitleInput {
@@ -90,36 +94,6 @@ export interface ScenarioSectionInput {
   readonly scenarios: readonly LinkedScenario[];
   readonly messages: Messages;
   readonly flowEnabled: boolean;
-}
-
-export interface ContractHeaderInput {
-  readonly linked: LinkedContract;
-  readonly messages: Messages;
-}
-
-export interface PreconditionsInput {
-  readonly guards: LinkedContract['contract']['guards'];
-  readonly messages: Messages;
-}
-
-export interface PostconditionsInput {
-  readonly conditions: LinkedContract['contract']['conditions'];
-  readonly messages: Messages;
-}
-
-export interface InvariantsInput {
-  readonly invariants: LinkedContract['contract']['invariants'];
-  readonly messages: Messages;
-}
-
-export interface ErrorCatalogInput {
-  readonly guards: LinkedContract['contract']['guards'];
-  readonly messages: Messages;
-}
-
-export interface TestExamplesInput {
-  readonly tests: LinkedContract['testSuite'];
-  readonly messages: Messages;
 }
 
 export interface CoverageSectionInput {

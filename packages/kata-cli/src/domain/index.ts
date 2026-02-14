@@ -1,5 +1,6 @@
 // Pipeline contracts + scenario
 export {
+  coverageGenerate,
   docAnalyze,
   docFilter,
   docGenerate,
@@ -10,16 +11,10 @@ export {
 
 // Render contracts + scenario
 export {
-  renderContractDetail,
-  renderCoverage,
-  renderErr,
-  renderHeader,
-  renderInv,
+  renderContractSections,
+  renderCoverageSection,
   renderMarkdownScenario,
-  renderPost,
-  renderPre,
   renderScenarios,
-  renderTests,
   renderTitle,
   renderToc,
 } from './render';
@@ -31,24 +26,19 @@ export { reportReplay, reportSummary } from './report';
 export type {
   AnalyzeInput,
   ContractDetailInput,
-  ContractHeaderInput,
+  CoverageGenerateInput,
   CoverageSectionInput,
   DocPipelineState,
-  ErrorCatalogInput,
   FilterInput,
   GenerateInput,
-  InvariantsInput,
   MarkdownInput,
   ParseInput,
   PipelineError,
-  PostconditionsInput,
-  PreconditionsInput,
   RenderError,
   ReporterError,
   ReporterInput,
   ScenarioSectionInput,
   SourceFileEntry,
-  TestExamplesInput,
   TitleInput,
   TocInput,
 } from './types';

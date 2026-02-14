@@ -6,6 +6,7 @@ import { getMessages } from '../../src/doc/i18n/index';
 import { generate } from '../../src/doc/index';
 import type { DocPipelineState, SourceFileEntry } from '../../src/domain/index';
 import {
+  coverageGenerate,
   docAnalyze,
   docFilter,
   docGenerate,
@@ -444,5 +445,37 @@ describe('doc.generate scenario', () => {
   test('exposes scenario metadata', () => {
     expect(docGenerate.id).toBe('doc.generate');
     expect(docGenerate.description).toBe('ドキュメント生成パイプライン');
+  });
+});
+
+describe('coverage.generate scenario', () => {
+  test('runs parse -> filter -> link -> analyze with report', () => {
+    const state = makeInitialState();
+    const entries = makeSourceFileEntries();
+
+    const result = expectOk(
+      coverageGenerate(state, {
+        sourceFiles: entries,
+      })
+    );
+
+    expect(result.coverageReport).toBeDefined();
+    expect(result.markdown).toBe('');
+    expect(result.linked.length).toBeGreaterThan(0);
+  });
+
+  test('supports contract-id filtering', () => {
+    const state = makeInitialState();
+    const entries = makeSourceFileEntries();
+
+    const result = expectOk(
+      coverageGenerate(state, {
+        sourceFiles: entries,
+        filterIds: new Set(['cart.create']),
+      })
+    );
+
+    expect(result.filtered).toHaveLength(1);
+    expect(result.filtered[0].id).toBe('cart.create');
   });
 });

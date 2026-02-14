@@ -8,25 +8,27 @@ export interface ScenarioFailure {
   readonly error: unknown;
 }
 
-export interface StepDef<TState> {
-  readonly contract: Contract<TState, unknown, unknown>;
-  readonly input: unknown;
+export interface StepDef<TState, TInput, TError> {
+  readonly contract: Contract<TState, TInput, TError>;
+  readonly input: TInput;
 }
 
 export function step<TState, TInput, TError>(
   contract: Contract<TState, TInput, TError>,
   input: TInput
-): StepDef<TState> {
+): StepDef<TState, TInput, TError> {
   return {
-    contract: contract as unknown as Contract<TState, unknown, unknown>,
+    contract,
     input,
   };
 }
 
+type AnyStep<TState> = StepDef<TState, unknown, unknown>;
+
 export interface ScenarioDef<TState, TInput> {
   readonly id: string;
   readonly description?: string;
-  readonly flow: (input: TInput) => ReadonlyArray<StepDef<TState>>;
+  readonly flow: (input: TInput) => ReadonlyArray<AnyStep<TState>>;
 }
 
 export type Scenario<TState, TInput> = ((

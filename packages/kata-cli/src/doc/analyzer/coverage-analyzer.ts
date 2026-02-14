@@ -18,10 +18,7 @@ export function analyzeCoverage(
   const totalContracts = contracts.length;
   const testedContracts = contracts.filter((c) => c.hasTests).length;
   const untestedContracts = totalContracts - testedContracts;
-  const contractCoveragePercent =
-    totalContracts > 0
-      ? Math.round((testedContracts / totalContracts) * 100)
-      : 100;
+  const contractCoveragePercent = toPercent(testedContracts, totalContracts);
 
   const totalErrorTags = contracts.reduce(
     (sum, c) => sum + c.totalErrorTags,
@@ -31,10 +28,7 @@ export function analyzeCoverage(
     (sum, c) => sum + c.coveredErrorTags,
     0
   );
-  const errorTagCoveragePercent =
-    totalErrorTags > 0
-      ? Math.round((coveredErrorTags / totalErrorTags) * 100)
-      : 100;
+  const errorTagCoveragePercent = toPercent(coveredErrorTags, totalErrorTags);
 
   return {
     contracts,
@@ -48,6 +42,11 @@ export function analyzeCoverage(
       errorTagCoveragePercent,
     },
   };
+}
+
+function toPercent(covered: number, total: number): number {
+  if (total === 0) return 100;
+  return Math.round((covered / total) * 1000) / 10;
 }
 
 function analyzeContract(linked: LinkedContract): ContractCoverage {

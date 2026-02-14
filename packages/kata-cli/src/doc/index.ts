@@ -7,13 +7,13 @@ import { createProgramFromFiles, resolveGlobs } from './parser/source-resolver';
 import { renderMarkdown } from './renderer/markdown';
 import type { KataDocConfig } from './types';
 
+export { ConfigError, loadConfig } from '../config';
 export { analyzeCoverage } from './analyzer/coverage-analyzer';
 export type {
   ContractCoverage,
   CoverageReport,
   ErrorTagCoverage,
 } from './analyzer/coverage-types';
-export { ConfigError, loadConfig } from './config';
 export type {
   FlowArtifact,
   FlowEdge,
@@ -25,7 +25,13 @@ export type {
 } from './flow';
 export { getMessages } from './i18n/index';
 export type { Locale, Messages } from './i18n/types';
-export type { DocumentModel, KataDocConfig, LinkedScenario } from './types';
+export type {
+  DocumentModel,
+  KataConfig,
+  KataDocConfig,
+  KataVerifyConfig,
+  LinkedScenario,
+} from './types';
 
 export interface GenerateOptions {
   readonly filterIds?: readonly string[];
@@ -121,21 +127,11 @@ export function generate(
     coverageEnabled: config.coverage ?? false,
   });
 
-  if (isOk(result)) {
-    return result.value.markdown;
+  if (!isOk(result)) {
+    throw new Error(
+      `Pipeline failed at step ${result.error.stepIndex}: ${result.error.contractId}`
+    );
   }
 
-  return renderMarkdown(
-    {
-      title: config.title,
-      description: config.description,
-      contracts: [],
-      scenarios: [],
-      sourceFiles: [],
-    },
-    {
-      messages,
-      flowEnabled,
-    }
-  );
+  return result.value.markdown;
 }

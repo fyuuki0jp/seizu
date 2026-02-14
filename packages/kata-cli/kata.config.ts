@@ -1,4 +1,4 @@
-import type { KataDocConfig } from './src/doc/types';
+import type { KataConfig } from './src/doc/types';
 
 export default {
   title: 'kata-cli Contract Specification',
@@ -18,4 +18,7 @@ export default {
   output: 'docs/contracts.md',
   locale: 'en',
   coverage: true,
-} satisfies KataDocConfig;
+  verify: {
+    contracts: [],
+  },
+} satisfies KataConfig;

@@ -12,16 +12,10 @@ import {
 } from '../doc/renderer/sections';
 import type {
   ContractDetailInput,
-  ContractHeaderInput,
   CoverageSectionInput,
-  ErrorCatalogInput,
-  InvariantsInput,
   MarkdownInput,
-  PostconditionsInput,
-  PreconditionsInput,
   RenderError,
   ScenarioSectionInput,
-  TestExamplesInput,
   TitleInput,
   TocInput,
 } from './types';
@@ -31,7 +25,7 @@ import type {
 export const renderTitle = define<readonly string[], TitleInput, RenderError>({
   id: 'render.title',
   pre: [
-    /** Title must not be empty */
+    /** Document title must not be empty. */
     (_, input) =>
       input.title.length > 0 ? pass : err({ tag: 'TitleEmpty' as const }),
   ],
@@ -43,12 +37,8 @@ export const renderTitle = define<readonly string[], TitleInput, RenderError>({
     return result;
   },
   post: [
-    /** Output lines increase after title is added */
+    /** Rendering a title always appends new lines. */
     (before, after) => after.length > before.length,
-  ],
-  invariant: [
-    /** Lines array is never negative length */
-    (state) => state.length >= 0,
   ],
 });
 
@@ -57,7 +47,7 @@ export const renderTitle = define<readonly string[], TitleInput, RenderError>({
 export const renderToc = define<readonly string[], TocInput, RenderError>({
   id: 'render.toc',
   pre: [
-    /** At least 2 contracts are required for table of contents */
+    /** TOC is meaningful only when two or more contracts are present. */
     (_, input) =>
       input.contracts.length >= 2
         ? pass
@@ -87,12 +77,8 @@ export const renderToc = define<readonly string[], TocInput, RenderError>({
     return result;
   },
   post: [
-    /** Output lines increase after TOC is added */
+    /** Rendering TOC appends lines to the existing output. */
     (before, after) => after.length > before.length,
-  ],
-  invariant: [
-    /** Lines array is never negative length */
-    (state) => state.length >= 0,
   ],
 });
 
@@ -105,7 +91,7 @@ export const renderScenarios = define<
 >({
   id: 'render.scenarioSection',
   pre: [
-    /** At least one scenario must exist */
+    /** Scenario section requires at least one parsed scenario. */
     (_, input) =>
       input.scenarios.length > 0 ? pass : err({ tag: 'NoScenarios' as const }),
   ],
@@ -116,227 +102,64 @@ export const renderScenarios = define<
     }).split('\n'),
   ],
   post: [
-    /** Output lines increase after scenario section */
+    /** Rendering scenario section appends lines to the existing output. */
     (before, after) => after.length > before.length,
   ],
-  invariant: [
-    /** Lines array is never negative length */
-    (state) => state.length >= 0,
-  ],
 });
 
-// === render.contractHeader ===
+export function renderContractSections(
+  lines: readonly string[],
+  input: ContractDetailInput
+): readonly string[] {
+  const { contracts, hasScenarios, messages, flowEnabled } = input;
+  const sorted = [...contracts].sort((a, b) =>
+    a.contract.id.localeCompare(b.contract.id)
+  );
+  const current = [...lines];
 
-export const renderHeader = define<
-  readonly string[],
-  ContractHeaderInput,
-  RenderError
->({
-  id: 'render.contractHeader',
-  pre: [
-    /** Contract ID must not be empty */
-    (_, input) =>
-      input.linked.contract.id.length > 0
-        ? pass
-        : err({ tag: 'TitleEmpty' as const }),
-  ],
-  transition: (lines, input) => [
-    ...lines,
-    ...renderContractHeader(input.linked, input.messages).split('\n'),
-  ],
-  post: [
-    /** Output lines increase after header is added */
-    (before, after) => after.length > before.length,
-  ],
-  invariant: [
-    /** Lines array is never negative length */
-    (state) => state.length >= 0,
-  ],
-});
-
-// === render.preconditions ===
-
-export const renderPre = define<readonly string[], PreconditionsInput, never>({
-  id: 'render.preconditions',
-  pre: [],
-  transition: (lines, input) => [
-    ...lines,
-    ...renderPreconditions(input.guards, input.messages).split('\n'),
-  ],
-  post: [
-    /** Output lines do not decrease */
-    (before, after) => after.length >= before.length,
-  ],
-  invariant: [
-    /** Lines array is never negative length */
-    (state) => state.length >= 0,
-  ],
-});
-
-// === render.postconditions ===
-
-export const renderPost = define<readonly string[], PostconditionsInput, never>(
-  {
-    id: 'render.postconditions',
-    pre: [],
-    transition: (lines, input) => [
-      ...lines,
-      ...renderPostconditions(input.conditions, input.messages).split('\n'),
-    ],
-    post: [
-      /** Output lines do not decrease */
-      (before, after) => after.length >= before.length,
-    ],
-    invariant: [
-      /** Lines array is never negative length */
-      (state) => state.length >= 0,
-    ],
+  if (sorted.length > 0 && hasScenarios) {
+    current.push('---', '', `## ${messages.contractDetail.sectionTitle}`, '');
   }
-);
 
-// === render.invariants ===
+  for (const linked of sorted) {
+    current.push('---', '');
+    current.push(...renderContractHeader(linked, messages).split('\n'));
+    if (flowEnabled && linked.contract.flow) {
+      current.push(
+        ...renderFlowSection(linked.contract.flow, messages).split('\n')
+      );
+    }
+    current.push(
+      ...renderPreconditions(linked.contract.guards, messages).split('\n')
+    );
+    current.push(
+      ...renderPostconditions(linked.contract.conditions, messages).split('\n')
+    );
+    current.push(
+      ...renderInvariants(linked.contract.invariants, messages).split('\n')
+    );
+    current.push(
+      ...renderErrorCatalog(linked.contract.guards, messages).split('\n')
+    );
+    current.push(
+      ...renderTestExamples(linked.testSuite?.tests, messages).split('\n')
+    );
+  }
 
-export const renderInv = define<readonly string[], InvariantsInput, never>({
-  id: 'render.invariants',
-  pre: [],
-  transition: (lines, input) => [
-    ...lines,
-    ...renderInvariants(input.invariants, input.messages).split('\n'),
-  ],
-  post: [
-    /** Output lines do not decrease */
-    (before, after) => after.length >= before.length,
-  ],
-  invariant: [
-    /** Lines array is never negative length */
-    (state) => state.length >= 0,
-  ],
-});
+  return current;
+}
 
-// === render.errorCatalog ===
-
-export const renderErr = define<readonly string[], ErrorCatalogInput, never>({
-  id: 'render.errorCatalog',
-  pre: [],
-  transition: (lines, input) => [
-    ...lines,
-    ...renderErrorCatalog(input.guards, input.messages).split('\n'),
-  ],
-  post: [
-    /** Output lines do not decrease */
-    (before, after) => after.length >= before.length,
-  ],
-  invariant: [
-    /** Lines array is never negative length */
-    (state) => state.length >= 0,
-  ],
-});
-
-// === render.testExamples ===
-
-export const renderTests = define<readonly string[], TestExamplesInput, never>({
-  id: 'render.testExamples',
-  pre: [],
-  transition: (lines, input) => [
-    ...lines,
-    ...renderTestExamples(input.tests?.tests, input.messages).split('\n'),
-  ],
-  post: [
-    /** Output lines do not decrease */
-    (before, after) => after.length >= before.length,
-  ],
-  invariant: [
-    /** Lines array is never negative length */
-    (state) => state.length >= 0,
-  ],
-});
-
-// === render.coverageSummary ===
-
-export const renderCoverage = define<
-  readonly string[],
-  CoverageSectionInput,
-  never
->({
-  id: 'render.coverageSummary',
-  pre: [],
-  transition: (lines, input) => [
+export function renderCoverageSection(
+  lines: readonly string[],
+  input: CoverageSectionInput
+): readonly string[] {
+  return [
     ...lines,
     '---',
     '',
     ...renderCoverageSummary(input.report, input.messages).split('\n'),
-  ],
-  post: [
-    /** Output lines increase after coverage section */
-    (before, after) => after.length > before.length,
-  ],
-  invariant: [
-    /** Lines array is never negative length */
-    (state) => state.length >= 0,
-  ],
-});
-
-// === render.contractDetail ===
-
-export const renderContractDetail = define<
-  readonly string[],
-  ContractDetailInput,
-  never
->({
-  id: 'render.contractDetail',
-  pre: [],
-  transition: (lines, input) => {
-    const { contracts, hasScenarios, messages, flowEnabled } = input;
-    const sorted = [...contracts].sort((a, b) =>
-      a.contract.id.localeCompare(b.contract.id)
-    );
-    const current = [...lines];
-
-    if (sorted.length > 0 && hasScenarios) {
-      current.push('---', '', `## ${messages.contractDetail.sectionTitle}`, '');
-    }
-
-    for (const linked of sorted) {
-      current.push('---', '');
-      current.push(...renderContractHeader(linked, messages).split('\n'));
-      if (flowEnabled && linked.contract.flow) {
-        current.push(
-          ...renderFlowSection(linked.contract.flow, messages).split('\n')
-        );
-      }
-      current.push(
-        ...renderPreconditions(linked.contract.guards, messages).split('\n')
-      );
-      current.push(
-        ...renderPostconditions(linked.contract.conditions, messages).split(
-          '\n'
-        )
-      );
-      current.push(
-        ...renderInvariants(linked.contract.invariants, messages).split('\n')
-      );
-      current.push(
-        ...renderErrorCatalog(linked.contract.guards, messages).split('\n')
-      );
-      current.push(
-        ...renderTestExamples(linked.testSuite?.tests, messages).split('\n')
-      );
-    }
-
-    return current;
-  },
-  post: [
-    /** Non-empty contracts increase output lines */
-    (before, after, input) =>
-      input.contracts.length > 0
-        ? after.length > before.length
-        : after.length >= before.length,
-  ],
-  invariant: [
-    /** Lines array is never negative length */
-    (state) => state.length >= 0,
-  ],
-});
+  ];
+}
 
 // === render.markdown scenario ===
 
@@ -345,11 +168,10 @@ export const renderMarkdownScenario = scenario<
   MarkdownInput
 >({
   id: 'render.markdown',
-  description: 'Markdown ドキュメント全体の組み立て',
+  description: 'Markdown ドキュメントの前半組み立て',
   flow: (input) => {
     const steps = [];
 
-    // 1. Title (always)
     steps.push(
       step(renderTitle, {
         title: input.title,
@@ -357,7 +179,6 @@ export const renderMarkdownScenario = scenario<
       })
     );
 
-    // 2. Scenario section (if scenarios exist)
     if (input.scenarios.length > 0) {
       steps.push(
         step(renderScenarios, {
@@ -368,7 +189,6 @@ export const renderMarkdownScenario = scenario<
       );
     }
 
-    // 3. TOC (if 2+ contracts)
     const sorted = [...input.contracts].sort((a, b) =>
       a.contract.id.localeCompare(b.contract.id)
     );
@@ -376,26 +196,6 @@ export const renderMarkdownScenario = scenario<
       steps.push(
         step(renderToc, {
           contracts: sorted,
-          messages: input.messages,
-        })
-      );
-    }
-
-    // 4. Contract details
-    steps.push(
-      step(renderContractDetail, {
-        contracts: input.contracts,
-        hasScenarios: input.scenarios.length > 0,
-        messages: input.messages,
-        flowEnabled: input.flowEnabled,
-      })
-    );
-
-    // 5. Coverage (if report exists)
-    if (input.coverageReport) {
-      steps.push(
-        step(renderCoverage, {
-          report: input.coverageReport,
           messages: input.messages,
         })
       );

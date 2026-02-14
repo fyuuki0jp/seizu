@@ -1,4 +1,6 @@
+import type { ContractEntry } from 'kata/verify';
 import type { FlowArtifact } from './flow';
+import type { Locale } from './i18n/types';
 
 // ===== Parsed Contract Model =====
 
@@ -103,8 +105,6 @@ export interface DocumentModel {
 
 // ===== Configuration =====
 
-import type { Locale } from './i18n/types';
-
 export interface KataDocConfig {
   readonly title: string;
   readonly description?: string;
@@ -117,4 +117,12 @@ export interface KataDocConfig {
   readonly coverage?: boolean;
   readonly flow?: boolean;
   readonly flowDebugOutput?: string;
+}
+
+export interface KataVerifyConfig {
+  readonly contracts: readonly ContractEntry[];
+}
+
+export interface KataConfig extends KataDocConfig {
+  readonly verify: KataVerifyConfig;
 }
