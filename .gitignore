@@ -27,4 +27,7 @@ pnpm-debug.log*
 # Test coverage
 coverage/
 
+# Turbo
+.turbo
+
 # Misc

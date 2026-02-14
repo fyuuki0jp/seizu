@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["src/**", "tests/**", "examples/**", "*.ts", "*.json"]
+    "includes": ["packages/**", "examples/**", "*.ts", "*.json"]
   },
   "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "linter": {

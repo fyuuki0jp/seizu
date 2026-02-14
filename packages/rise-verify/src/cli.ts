@@ -1,0 +1,61 @@
+import { cac } from 'cac';
+import { ConfigError, loadConfig } from './config';
+import { json } from './reporter/json';
+import { replay } from './reporter/replay';
+import { summary } from './reporter/summary';
+import { verify } from './runner';
+
+const reporters = { summary, json, replay } as const;
+type ReporterName = keyof typeof reporters;
+
+const cli = cac('rise-verify');
+
+cli
+  .command('[...contracts]', 'Verify contracts')
+  .option('--reporter <type>', 'Reporter: summary, json, replay', {
+    default: 'summary',
+  })
+  .option('--runs <count>', 'Number of PBT runs', { default: 100 })
+  .option('--config <path>', 'Config file path')
+  .option('--seed <seed>', 'Random seed for reproduction')
+  .option('--path <path>', 'Counterexample path for reproduction')
+  .action(async (contracts: string[], options) => {
+    try {
+      const { config } = await loadConfig(options.config);
+
+      let entries = config.contracts;
+      if (contracts.length > 0) {
+        entries = entries.filter((e) => contracts.includes(e.contract.id));
+        if (entries.length === 0) {
+          console.error(`No contracts matched: ${contracts.join(', ')}`);
+          process.exit(2);
+        }
+      }
+
+      const result = verify(entries, {
+        numRuns: Number(options.runs),
+        seed: options.seed !== undefined ? Number(options.seed) : undefined,
+        path: options.path,
+      });
+
+      const reporterName = options.reporter as ReporterName;
+      const reporter = reporters[reporterName] ?? reporters.summary;
+      console.log(reporter(result));
+
+      process.exit(result.success ? 0 : 1);
+    } catch (error) {
+      if (error instanceof ConfigError) {
+        console.error(`Configuration error: ${error.message}`);
+        process.exit(2);
+      }
+      throw error;
+    }
+  });
+
+cli.command('init', 'Generate template files').action(() => {
+  console.log('rise-verify init - coming soon');
+});
+
+cli.help();
+cli.version('2.0.0');
+cli.parse();
