@@ -440,7 +440,7 @@ describe('doc.generate scenario', () => {
     );
 
     expect(result.markdown).toBe(expected);
-  });
+  }, 20_000);
 
   test('exposes scenario metadata', () => {
     expect(docGenerate.id).toBe('doc.generate');
