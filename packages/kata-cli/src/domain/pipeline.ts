@@ -145,7 +145,6 @@ export const docRender = define<DocPipelineState, Record<string, never>, never>(
         contracts: state.linked,
         scenarios: state.linkedScenarios,
         messages: state.messages,
-        coverageReport: state.coverageReport,
       });
 
       if (!isOk(result)) {

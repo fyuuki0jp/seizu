@@ -49,7 +49,6 @@ describe('loadConfig', () => {
       'tests/fixtures/cart-contracts.ts',
     ]);
     expect(result.config.verify.contracts).toEqual([]);
-    expect(result.filePath).toBe(configPath);
     vi.restoreAllMocks();
   });
 });

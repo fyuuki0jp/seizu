@@ -5,7 +5,6 @@ import type { KataConfig } from '../doc/types';
 
 export interface ResolvedConfig {
   readonly config: KataConfig;
-  readonly filePath: string;
 }
 
 export class ConfigError extends Error {
@@ -44,8 +43,7 @@ function validateConfig(config: unknown): asserts config is KataConfig {
 }
 
 export async function loadConfig(configPath?: string): Promise<ResolvedConfig> {
-  const filePath = configPath ?? 'kata.config.ts';
-  const absolutePath = resolve(process.cwd(), filePath);
+  const absolutePath = resolve(process.cwd(), configPath ?? 'kata.config.ts');
 
   if (!existsSync(absolutePath)) {
     throw new ConfigError(`Config file not found: ${absolutePath}`);
@@ -57,5 +55,5 @@ export async function loadConfig(configPath?: string): Promise<ResolvedConfig> {
   const rawConfig = module.default;
 
   validateConfig(rawConfig);
-  return { config: rawConfig, filePath: absolutePath };
+  return { config: rawConfig };
 }

@@ -115,7 +115,6 @@ export interface MarkdownInput {
   readonly contracts: readonly LinkedContract[];
   readonly scenarios: readonly LinkedScenario[];
   readonly messages: Messages;
-  readonly coverageReport: CoverageReport | undefined;
 }
 
 // === Reporter Input Types ===

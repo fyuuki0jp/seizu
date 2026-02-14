@@ -158,7 +158,6 @@ describe('registerDocCommand', () => {
         locale: 'ja',
         verify: { contracts: [] },
       },
-      filePath: '/workspace/kata.config.ts',
     });
     getMessagesMock.mockReturnValue({ locale: 'ja' });
     resolveGlobsMock.mockReturnValue([]);
@@ -182,7 +181,6 @@ describe('registerDocCommand', () => {
         contracts: ['contracts/**/*.ts'],
         verify: { contracts: [] },
       },
-      filePath: '/workspace/kata.config.ts',
     });
     getMessagesMock.mockReturnValue({ locale: 'en' });
     resolveGlobsMock
@@ -243,7 +241,6 @@ describe('registerDocCommand', () => {
         contracts: ['contracts/**/*.ts'],
         verify: { contracts: [] },
       },
-      filePath: '/workspace/kata.config.ts',
     });
     getMessagesMock.mockReturnValue({ locale: 'en' });
     resolveGlobsMock
@@ -273,7 +270,6 @@ describe('registerDocCommand', () => {
         contracts: ['contracts/**/*.ts'],
         verify: { contracts: [] },
       },
-      filePath: '/workspace/kata.config.ts',
     });
     getMessagesMock.mockReturnValue({ locale: 'en' });
     resolveGlobsMock.mockReturnValue([]);

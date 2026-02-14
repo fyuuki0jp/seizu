@@ -30,7 +30,6 @@ export function renderMarkdown(
     contracts: model.contracts,
     scenarios: model.scenarios,
     messages: options.messages,
-    coverageReport: options.coverageReport,
   });
 
   if (!isOk(result)) {

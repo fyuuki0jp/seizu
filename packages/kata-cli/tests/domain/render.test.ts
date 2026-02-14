@@ -278,7 +278,6 @@ describe('render.markdown scenario', () => {
       ],
       scenarios: [makeLinkedScenario()],
       messages,
-      coverageReport: undefined,
     });
 
     const lines = expectOk(result);
@@ -321,7 +320,6 @@ describe('render.markdown scenario', () => {
       contracts,
       scenarios,
       messages,
-      coverageReport,
     });
 
     expect(isOk(prelude)).toBe(true);

@@ -124,7 +124,6 @@ describe('registerCoverageCommand', () => {
   test('uses config locale and prints formatted report', async () => {
     loadConfigMock.mockResolvedValue({
       config: { ...makeConfig(), locale: 'ja' },
-      filePath: '/workspace/kata.config.ts',
     });
     getMessagesMock.mockReturnValue({ locale: 'ja' });
     resolveGlobsMock
@@ -158,7 +157,6 @@ describe('registerCoverageCommand', () => {
   test('supports json output and explicit locale override', async () => {
     loadConfigMock.mockResolvedValue({
       config: { ...makeConfig(), locale: 'ja' },
-      filePath: '/workspace/kata.config.ts',
     });
     getMessagesMock.mockReturnValue({ locale: 'en' });
     resolveGlobsMock
@@ -203,7 +201,6 @@ describe('registerCoverageCommand', () => {
   test('exits early when no source files are resolved', async () => {
     loadConfigMock.mockResolvedValue({
       config: makeConfig(),
-      filePath: '/workspace/kata.config.ts',
     });
     getMessagesMock.mockReturnValue({ locale: 'en' });
     resolveGlobsMock.mockReturnValue([]);
@@ -218,7 +215,6 @@ describe('registerCoverageCommand', () => {
   test('handles pipeline failure', async () => {
     loadConfigMock.mockResolvedValue({
       config: makeConfig(),
-      filePath: '/workspace/kata.config.ts',
     });
     getMessagesMock.mockReturnValue({ locale: 'en' });
     resolveGlobsMock
