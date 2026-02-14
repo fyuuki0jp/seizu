@@ -255,4 +255,35 @@ const x = define<S, I, E>({
     expect(contracts[0].guards[0].errorTags).toEqual(['NotFound']);
     expect(contracts[0].guards[0].kind).toBe('inline');
   });
+
+  test('falls back to description property when no TSDoc', () => {
+    const source = createSourceFile(`
+const x = define<S, I, E>({
+  id: 'test.descprop',
+  description: 'Inline description',
+  pre: [],
+  transition: (s) => s,
+});
+`);
+
+    const contracts = parseContracts(source);
+    expect(contracts).toHaveLength(1);
+    expect(contracts[0].description).toBe('Inline description');
+  });
+
+  test('prefers TSDoc over description property', () => {
+    const source = createSourceFile(`
+/** TSDoc description */
+const x = define<S, I, E>({
+  id: 'test.both',
+  description: 'Inline description',
+  pre: [],
+  transition: (s) => s,
+});
+`);
+
+    const contracts = parseContracts(source);
+    expect(contracts).toHaveLength(1);
+    expect(contracts[0].description).toBe('TSDoc description');
+  });
 });

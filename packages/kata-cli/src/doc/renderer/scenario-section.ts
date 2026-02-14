@@ -49,7 +49,18 @@ export function renderScenarioSection(
 }
 
 function formatInput(inputLiteral: string): string {
+  let text = inputLiteral.trimEnd();
+  // Strip TypeScript type assertion: `} as TypeName`
+  const asMatch = text.match(/^([\s\S]*\})\s+as\s+.+$/);
+  if (asMatch) {
+    text = asMatch[1];
+  }
   // Clean up object literal for table display
-  const cleaned = inputLiteral.replace(/^\{/, '').replace(/\}$/, '').trim();
+  const cleaned = text
+    .replace(/^\{/, '')
+    .replace(/\}$/, '')
+    .replace(/\n\s*/g, ' ')
+    .replace(/,\s*$/, '')
+    .trim();
   return cleaned || '-';
 }

@@ -28,6 +28,12 @@
     "typescript": "^5.9.3",
     "vitest": "^4.0.17"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp"
+    ]
+  },
   "engines": {
     "node": ">=20"
   }

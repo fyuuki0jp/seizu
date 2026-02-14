@@ -1,5 +1,10 @@
 import ts from 'typescript';
 import type { ParsedScenario, ParsedScenarioStep } from '../types';
+import {
+  extractStringProperty,
+  findArrowFunctionProperty,
+  findEnclosingVariableName,
+} from './ast-utils';
 import { extractVariableTSDoc } from './tsdoc-extractor';
 
 /**
@@ -46,9 +51,11 @@ function parseScenarioCall(
 
   const steps = extractStepsFromFlow(arg, sourceFile, contractVarMap);
   const variableName = findEnclosingVariableName(call);
-  const description = variableName
+  const tsdocDescription = variableName
     ? extractVariableTSDoc(variableName, sourceFile)
     : undefined;
+  const description =
+    tsdocDescription ?? extractStringProperty(arg, 'description');
 
   const line =
     sourceFile.getLineAndCharacterOfPosition(call.getStart(sourceFile)).line +
@@ -77,13 +84,78 @@ function extractStepsFromFlow(
   if (!flowFn) return [];
 
   const arrayExpr = findArrayInArrowBody(flowFn.body);
-  if (!arrayExpr) return [];
+  if (arrayExpr) {
+    return arrayExpr.elements
+      .map((element, index) =>
+        parseStepCall(element, index, sourceFile, contractVarMap)
+      )
+      .filter((s): s is ParsedScenarioStep => s !== undefined);
+  }
 
-  return arrayExpr.elements
-    .map((element, index) =>
-      parseStepCall(element, index, sourceFile, contractVarMap)
+  // Fallback: handle imperative push pattern
+  // e.g. const steps = []; steps.push(step(...)); return steps;
+  if (ts.isBlock(flowFn.body)) {
+    return collectPushSteps(flowFn.body, sourceFile, contractVarMap);
+  }
+
+  return [];
+}
+
+/**
+ * Collect step() calls from imperative push pattern:
+ * const steps = []; steps.push(step(...)); return steps;
+ * Recursively walks if/else blocks to find nested pushes.
+ */
+function collectPushSteps(
+  block: ts.Block,
+  sourceFile: ts.SourceFile,
+  contractVarMap: Map<string, string>
+): ParsedScenarioStep[] {
+  const arrayVarName = findEmptyArrayVariable(block);
+  if (!arrayVarName) return [];
+
+  // Recursively collect all <varName>.push(step(...)) calls
+  const stepNodes: ts.Node[] = [];
+  function visit(node: ts.Node) {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isPropertyAccessExpression(node.expression) &&
+      ts.isIdentifier(node.expression.expression) &&
+      node.expression.expression.text === arrayVarName &&
+      node.expression.name.text === 'push' &&
+      node.arguments.length === 1
+    ) {
+      stepNodes.push(node.arguments[0]);
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(block);
+
+  return stepNodes
+    .map((node, index) =>
+      parseStepCall(node, index, sourceFile, contractVarMap)
     )
     .filter((s): s is ParsedScenarioStep => s !== undefined);
+}
+
+/**
+ * Find the first variable in a block that is initialized as an empty array literal.
+ */
+function findEmptyArrayVariable(block: ts.Block): string | undefined {
+  for (const stmt of block.statements) {
+    if (!ts.isVariableStatement(stmt)) continue;
+    for (const decl of stmt.declarationList.declarations) {
+      if (
+        ts.isIdentifier(decl.name) &&
+        decl.initializer &&
+        ts.isArrayLiteralExpression(decl.initializer) &&
+        decl.initializer.elements.length === 0
+      ) {
+        return decl.name.text;
+      }
+    }
+  }
+  return undefined;
 }
 
 function findArrayInArrowBody(
@@ -167,51 +239,4 @@ function buildContractVarMap(sourceFile: ts.SourceFile): Map<string, string> {
 
   visit(sourceFile);
   return map;
-}
-
-function extractStringProperty(
-  obj: ts.ObjectLiteralExpression,
-  name: string
-): string | undefined {
-  for (const prop of obj.properties) {
-    if (
-      ts.isPropertyAssignment(prop) &&
-      ts.isIdentifier(prop.name) &&
-      prop.name.text === name
-    ) {
-      if (ts.isStringLiteral(prop.initializer)) {
-        return prop.initializer.text;
-      }
-    }
-  }
-  return undefined;
-}
-
-function findArrowFunctionProperty(
-  obj: ts.ObjectLiteralExpression,
-  name: string
-): ts.ArrowFunction | undefined {
-  for (const prop of obj.properties) {
-    if (
-      ts.isPropertyAssignment(prop) &&
-      ts.isIdentifier(prop.name) &&
-      prop.name.text === name
-    ) {
-      if (ts.isArrowFunction(prop.initializer)) {
-        return prop.initializer;
-      }
-    }
-  }
-  return undefined;
-}
-
-function findEnclosingVariableName(node: ts.Node): string | undefined {
-  let current = node.parent;
-  while (current) {
-    if (ts.isVariableDeclaration(current) && ts.isIdentifier(current.name)) {
-      return current.name.text;
-    }
-    current = current.parent;
-  }
-  return undefined;
 }

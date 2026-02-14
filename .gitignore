@@ -30,4 +30,7 @@ pnpm-debug.log*
 # Turbo
 .turbo
 
+# Astro
+.astro/
+
 # Misc

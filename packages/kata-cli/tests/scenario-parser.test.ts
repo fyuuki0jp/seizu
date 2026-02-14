@@ -233,4 +233,114 @@ const s = scenario({
     expect(scenarios).toHaveLength(1);
     expect(scenarios[0].steps).toHaveLength(0);
   });
+
+  test('parses flow with imperative push pattern', () => {
+    const source = createSourceFile(`
+const create = define<S, I, E>({
+  id: 'test.create',
+  pre: [],
+  transition: (s) => s,
+});
+
+const update = define<S, I, E>({
+  id: 'test.update',
+  pre: [],
+  transition: (s) => s,
+});
+
+const s = scenario({
+  id: 'test.push',
+  flow: (input) => {
+    const steps = [];
+    steps.push(step(create, { data: 1 }));
+    steps.push(step(update, { data: 2 }));
+    return steps;
+  },
+});
+`);
+
+    const scenarios = parseScenarios(source);
+    expect(scenarios).toHaveLength(1);
+    expect(scenarios[0].steps).toHaveLength(2);
+    expect(scenarios[0].steps[0].contractId).toBe('test.create');
+    expect(scenarios[0].steps[1].contractId).toBe('test.update');
+  });
+
+  test('parses flow with conditional push pattern', () => {
+    const source = createSourceFile(`
+const create = define<S, I, E>({
+  id: 'test.create',
+  pre: [],
+  transition: (s) => s,
+});
+
+const update = define<S, I, E>({
+  id: 'test.update',
+  pre: [],
+  transition: (s) => s,
+});
+
+const s = scenario({
+  id: 'test.condpush',
+  flow: (input) => {
+    const steps = [];
+    steps.push(step(create, { data: 1 }));
+    if (input.flag) {
+      steps.push(step(update, { data: 2 }));
+    }
+    return steps;
+  },
+});
+`);
+
+    const scenarios = parseScenarios(source);
+    expect(scenarios).toHaveLength(1);
+    // Picks up both top-level and nested push calls
+    expect(scenarios[0].steps).toHaveLength(2);
+    expect(scenarios[0].steps[0].contractId).toBe('test.create');
+    expect(scenarios[0].steps[1].contractId).toBe('test.update');
+  });
+
+  test('falls back to description property when no TSDoc', () => {
+    const source = createSourceFile(`
+const s = scenario({
+  id: 'test.descprop',
+  description: 'Inline description',
+  flow: () => [],
+});
+`);
+
+    const scenarios = parseScenarios(source);
+    expect(scenarios).toHaveLength(1);
+    expect(scenarios[0].description).toBe('Inline description');
+  });
+
+  test('prefers TSDoc over description property', () => {
+    const source = createSourceFile(`
+/** TSDoc description */
+const s = scenario({
+  id: 'test.both',
+  description: 'Inline description',
+  flow: () => [],
+});
+`);
+
+    const scenarios = parseScenarios(source);
+    expect(scenarios).toHaveLength(1);
+    expect(scenarios[0].description).toBe('TSDoc description');
+  });
+
+  test('uses description property when no variable name', () => {
+    const source = createSourceFile(`
+export default scenario({
+  id: 'test.novar',
+  description: 'Default export description',
+  flow: () => [],
+});
+`);
+
+    const scenarios = parseScenarios(source);
+    expect(scenarios).toHaveLength(1);
+    expect(scenarios[0].description).toBe('Default export description');
+  });
 });

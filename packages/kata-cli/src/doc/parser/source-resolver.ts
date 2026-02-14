@@ -98,7 +98,7 @@ function collectFiles(
   } else {
     const fullPath = join(dir, part);
     if (isLast) {
-      if (!isDirectory(fullPath)) {
+      if (isFile(fullPath)) {
         results.push(fullPath);
       }
     } else {
@@ -121,6 +121,14 @@ function readDirSafe(dir: string): string[] {
     return readdirSync(dir);
   } catch {
     return [];
+  }
+}
+
+function isFile(path: string): boolean {
+  try {
+    return statSync(path).isFile();
+  } catch {
+    return false;
   }
 }
 

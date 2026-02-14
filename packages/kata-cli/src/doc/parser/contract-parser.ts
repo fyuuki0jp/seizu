@@ -6,6 +6,11 @@ import type {
   ParsedInvariant,
   ParsedTypeInfo,
 } from '../types';
+import {
+  extractStringProperty,
+  findArrayProperty,
+  findEnclosingVariableName,
+} from './ast-utils';
 import { extractErrorTags } from './error-tag-extractor';
 import { extractLeadingTSDoc, extractVariableTSDoc } from './tsdoc-extractor';
 
@@ -54,9 +59,11 @@ function parseDefineCall(
   const conditions = extractConditions(arg, sourceFile);
   const invariants = extractInvariants(arg, sourceFile);
   const variableName = findEnclosingVariableName(call);
-  const description = variableName
+  const tsdocDescription = variableName
     ? extractVariableTSDoc(variableName, sourceFile)
     : undefined;
+  const description =
+    tsdocDescription ?? extractStringProperty(arg, 'description');
 
   const line =
     sourceFile.getLineAndCharacterOfPosition(call.getStart(sourceFile)).line +
@@ -73,24 +80,6 @@ function parseDefineCall(
     sourceFile: sourceFile.fileName,
     line,
   };
-}
-
-function extractStringProperty(
-  obj: ts.ObjectLiteralExpression,
-  name: string
-): string | undefined {
-  for (const prop of obj.properties) {
-    if (
-      ts.isPropertyAssignment(prop) &&
-      ts.isIdentifier(prop.name) &&
-      prop.name.text === name
-    ) {
-      if (ts.isStringLiteral(prop.initializer)) {
-        return prop.initializer.text;
-      }
-    }
-  }
-  return undefined;
 }
 
 function extractTypeInfo(
@@ -194,35 +183,6 @@ function extractInvariants(
       referenceName: undefined,
     };
   });
-}
-
-function findArrayProperty(
-  obj: ts.ObjectLiteralExpression,
-  name: string
-): ts.ArrayLiteralExpression | undefined {
-  for (const prop of obj.properties) {
-    if (
-      ts.isPropertyAssignment(prop) &&
-      ts.isIdentifier(prop.name) &&
-      prop.name.text === name
-    ) {
-      if (ts.isArrayLiteralExpression(prop.initializer)) {
-        return prop.initializer;
-      }
-    }
-  }
-  return undefined;
-}
-
-function findEnclosingVariableName(node: ts.Node): string | undefined {
-  let current = node.parent;
-  while (current) {
-    if (ts.isVariableDeclaration(current) && ts.isIdentifier(current.name)) {
-      return current.name.text;
-    }
-    current = current.parent;
-  }
-  return undefined;
 }
 
 function resolveIdentifierErrorTags(

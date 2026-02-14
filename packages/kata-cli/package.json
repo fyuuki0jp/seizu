@@ -26,7 +26,8 @@
   ],
   "scripts": {
     "build": "tsup",
-    "test": "vitest run"
+    "test": "vitest run",
+    "doc:self": "tsx src/cli.ts doc --config kata-doc.config.ts"
   },
   "dependencies": {
     "kata": "workspace:*",
