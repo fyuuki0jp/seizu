@@ -1,35 +1,33 @@
-# AGENTS.md - RISE v2
+# AGENTS.md - kata (型)
 
 Guidelines for AI coding agents working in this repository.
 
 ## Project Overview
 
-RISE is a contract-based state transition library for TypeScript. It lets you declare `{ pre, transition, post, invariant }` once with `define()`, producing both an executable function and verifiable metadata.
+kata (型) is a contract-based state transition library for TypeScript. It lets you declare `{ pre, transition, post, invariant }` once with `define()`, producing both an executable function and verifiable metadata. The name kata (型) embodies three meanings: martial arts kata (prescribed forms = scenarios), manufacturing mold (contracts that shape implementations), and type (TypeScript type safety).
 
-- `rise` - Core library (zero dependencies): `define()`, `Result`, `Guard`, `Condition`, `Invariant`
-- `rise-verify` - PBT verification CLI (fast-check): automated contract verification
+- `kata` - Core library (zero dependencies): `define()`, `Result`, `Guard`, `Condition`, `Invariant`
+- `kata-cli` - CLI tool: document generation, PBT verification, coverage analysis
 
 ## Monorepo Structure
 
 ```
 packages/
-├── rise/                  # Core library
+├── kata/                  # Core library
 │   ├── src/
 │   │   ├── result.ts     # Result<T,E>, ok, err, isOk, isErr, map, flatMap, match
 │   │   ├── types.ts      # Guard, Condition, Invariant, ContractDef, Contract
 │   │   ├── define.ts     # define() function
 │   │   └── index.ts      # re-export
 │   └── tests/
-└── rise-verify/           # PBT verification CLI
+└── kata-cli/              # CLI tool
     ├── src/
-    │   ├── config.ts      # Config loading
-    │   ├── runner.ts      # fast-check verification
-    │   ├── reporter/      # summary, json, replay
-    │   ├── cli.ts         # CLI entry
-    │   └── index.ts       # Programmatic API
+    │   ├── commands/      # doc, verify, coverage commands
+    │   ├── doc/           # Document generation (parser, linker, renderer, i18n)
+    │   ├── verify/        # PBT verification (config, reporters)
+    │   ├── coverage/      # Coverage reporters
+    │   └── cli.ts         # CLI entry
     └── tests/
-examples/
-└── cart/                  # Cart example
 ```
 
 ## Build/Lint/Test Commands
@@ -41,18 +39,15 @@ pnpm build                # Build all packages (turbo)
 pnpm test                 # Test all packages (turbo)
 
 # Per-package
-pnpm --filter rise build
-pnpm --filter rise test
-pnpm --filter rise-verify build
-pnpm --filter rise-verify test
+pnpm --filter kata build
+pnpm --filter kata test
+pnpm --filter kata-cli build
+pnpm --filter kata-cli test
 
 # Lint & Format (Biome)
 pnpm lint                 # Check linting issues
 pnpm lint:fix             # Fix linting issues
 pnpm format               # Format code
-
-# Run examples
-npx tsx --tsconfig examples/tsconfig.json examples/cart/main.ts
 ```
 
 ## Code Style Guidelines
@@ -99,7 +94,7 @@ type CartError = CartNotFound | DuplicateItem;
 ### Contract Pattern
 
 ```typescript
-import { define } from 'rise';
+import { define } from 'kata';
 
 export const addItem = define<CartState, AddItemInput, CartError>({
   id: 'cart.addItem',
@@ -120,7 +115,7 @@ export const addItem = define<CartState, AddItemInput, CartError>({
 
 ```typescript
 import { describe, expect, test } from 'vitest';
-import { define, isOk, isErr } from 'rise';
+import { define, isOk, isErr } from 'kata';
 
 describe('cart.addItem', () => {
   test('adds item to existing cart', () => {
@@ -132,8 +127,8 @@ describe('cart.addItem', () => {
 
 ## Key Principles
 
-1. **Zero Dependencies** (`rise` package) - No runtime dependencies
+1. **Zero Dependencies** (`kata` package) - No runtime dependencies
 2. **Plain Objects + Functions** - No classes, no builder patterns, no DSLs
 3. **Explicit Errors** - Use `Result<T, E>` types, not exceptions
 4. **Contracts as Code** - Pre/post/invariant declared alongside transitions
-5. **Verification by PBT** - `rise-verify` uses fast-check to find violations automatically
+5. **Verification by PBT** - `kata-cli verify` uses fast-check to find violations automatically

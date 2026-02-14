@@ -39,19 +39,23 @@ importers:
         specifier: ^4.0.17
         version: 4.0.17(@types/node@25.0.9)(tsx@4.21.0)(yaml@2.8.2)
 
-  packages/rise: {}
+  packages/kata:
+    devDependencies:
+      fast-check:
+        specifier: ^3.23.2
+        version: 3.23.2
 
-  packages/rise-verify:
+  packages/kata-cli:
     dependencies:
       cac:
         specifier: ^6.0.0
         version: 6.7.14
-      fast-check:
-        specifier: ^3.0.0
-        version: 3.23.2
-      rise:
+      kata:
         specifier: workspace:*
-        version: link:../rise
+        version: link:../kata
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
 
 packages:
 
