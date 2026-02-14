@@ -160,6 +160,138 @@ describe('renderMarkdown', () => {
     expect(markdown).toContain('_No tests found');
   });
 
+  test('renders failure test result without matching pattern as generic error', () => {
+    const failureModel: DocumentModel = {
+      title: 'Test',
+      description: undefined,
+      contracts: [
+        {
+          contract: {
+            id: 'test.failure',
+            description: undefined,
+            typeInfo: {
+              stateTypeName: 'S',
+              inputTypeName: 'I',
+              errorTypeName: 'E',
+            },
+            guards: [],
+            conditions: [],
+            invariants: [],
+            variableName: 'x',
+            sourceFile: 'test.ts',
+            line: 1,
+          },
+          testSuite: {
+            contractId: 'test.failure',
+            tests: [
+              {
+                name: 'should fail on invalid input',
+                classification: 'failure',
+                sourceFile: 'test.ts',
+                line: 1,
+              },
+            ],
+            sourceFile: 'test.ts',
+          },
+        },
+      ],
+      scenarios: [],
+      sourceFiles: ['test.ts'],
+    };
+
+    const markdown = renderMarkdown(failureModel, { messages: en });
+    expect(markdown).toContain('should fail on invalid input');
+    expect(markdown).toContain(en.testResult.errorGeneric);
+  });
+
+  test('renders failure test result with matching pattern as error tag', () => {
+    const failureModel: DocumentModel = {
+      title: 'Test',
+      description: undefined,
+      contracts: [
+        {
+          contract: {
+            id: 'test.failure2',
+            description: undefined,
+            typeInfo: {
+              stateTypeName: 'S',
+              inputTypeName: 'I',
+              errorTypeName: 'E',
+            },
+            guards: [],
+            conditions: [],
+            invariants: [],
+            variableName: 'x',
+            sourceFile: 'test.ts',
+            line: 1,
+          },
+          testSuite: {
+            contractId: 'test.failure2',
+            tests: [
+              {
+                name: 'returns NotFound when missing',
+                classification: 'failure',
+                sourceFile: 'test.ts',
+                line: 1,
+              },
+            ],
+            sourceFile: 'test.ts',
+          },
+        },
+      ],
+      scenarios: [],
+      sourceFiles: ['test.ts'],
+    };
+
+    const markdown = renderMarkdown(failureModel, { messages: en });
+    expect(markdown).toContain('NotFound');
+  });
+
+  test('renders with scenarios and contracts (2-tier structure)', () => {
+    const tieredModel: DocumentModel = {
+      title: 'Tiered',
+      description: undefined,
+      contracts: [
+        {
+          contract: {
+            id: 'cart.create',
+            description: undefined,
+            typeInfo: {
+              stateTypeName: 'S',
+              inputTypeName: 'I',
+              errorTypeName: 'E',
+            },
+            guards: [],
+            conditions: [],
+            invariants: [],
+            variableName: 'createCart',
+            sourceFile: 'test.ts',
+            line: 1,
+          },
+          testSuite: undefined,
+        },
+      ],
+      scenarios: [
+        {
+          scenario: {
+            id: 'flow.purchase',
+            description: undefined,
+            variableName: undefined,
+            steps: [],
+            sourceFile: 'test.ts',
+            line: 1,
+          },
+          resolvedSteps: [],
+        },
+      ],
+      sourceFiles: ['test.ts'],
+    };
+
+    const markdown = renderMarkdown(tieredModel, { messages: en });
+    expect(markdown).toContain('## Scenarios');
+    expect(markdown).toContain(`## ${en.contractDetail.sectionTitle}`);
+  });
+
   test('sorts contracts by ID for deterministic output', () => {
     const sortModel: DocumentModel = {
       title: 'Test',

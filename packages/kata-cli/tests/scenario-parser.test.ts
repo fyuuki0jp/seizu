@@ -144,4 +144,111 @@ const s = scenario({
     const scenarios = parseScenarios(source);
     expect(scenarios[0].steps[0].contractId).toBe('unknownContract');
   });
+
+  test('returns empty for scenario() with no arguments', () => {
+    const source = createSourceFile(`const s = scenario();`);
+    const scenarios = parseScenarios(source);
+    expect(scenarios).toHaveLength(0);
+  });
+
+  test('returns empty for scenario() with non-object argument', () => {
+    const source = createSourceFile(`const s = scenario('string');`);
+    const scenarios = parseScenarios(source);
+    expect(scenarios).toHaveLength(0);
+  });
+
+  test('returns empty for scenario() without id property', () => {
+    const source = createSourceFile(`
+const s = scenario({
+  initial: {},
+  steps: [],
+});
+`);
+    const scenarios = parseScenarios(source);
+    expect(scenarios).toHaveLength(0);
+  });
+
+  test('handles step with non-identifier contract arg', () => {
+    const source = createSourceFile(`
+const s = scenario({
+  id: 'test.propaccess',
+  initial: {},
+  steps: [
+    step(contracts.create, { data: 1 }),
+  ],
+});
+`);
+    const scenarios = parseScenarios(source);
+    expect(scenarios[0].steps[0].contractId).toBe('contracts.create');
+  });
+
+  test('filters out non-step-call elements in steps array', () => {
+    const source = createSourceFile(`
+const s = scenario({
+  id: 'test.filter',
+  initial: {},
+  steps: [
+    someVariable,
+    step(create, { data: 1 }),
+  ],
+});
+`);
+    const scenarios = parseScenarios(source);
+    expect(scenarios[0].steps).toHaveLength(1);
+    expect(scenarios[0].steps[0].contractId).toBe('create');
+  });
+
+  test('handles step with insufficient arguments', () => {
+    const source = createSourceFile(`
+const s = scenario({
+  id: 'test.noargs',
+  initial: {},
+  steps: [
+    step(create),
+  ],
+});
+`);
+    const scenarios = parseScenarios(source);
+    expect(scenarios[0].steps).toHaveLength(0);
+  });
+
+  test('handles scenario without enclosing variable', () => {
+    const source = createSourceFile(`
+export default scenario({
+  id: 'test.novar',
+  initial: {},
+  steps: [],
+});
+`);
+    const scenarios = parseScenarios(source);
+    expect(scenarios).toHaveLength(1);
+    expect(scenarios[0].variableName).toBeUndefined();
+    expect(scenarios[0].description).toBeUndefined();
+  });
+
+  test('handles non-step function calls in steps array', () => {
+    const source = createSourceFile(`
+const s = scenario({
+  id: 'test.otherfn',
+  initial: {},
+  steps: [
+    otherFunction(create, {}),
+  ],
+});
+`);
+    const scenarios = parseScenarios(source);
+    expect(scenarios[0].steps).toHaveLength(0);
+  });
+
+  test('handles scenario with steps but no steps property', () => {
+    const source = createSourceFile(`
+const s = scenario({
+  id: 'test.nosteps',
+  initial: {},
+});
+`);
+    const scenarios = parseScenarios(source);
+    expect(scenarios).toHaveLength(1);
+    expect(scenarios[0].steps).toHaveLength(0);
+  });
 });

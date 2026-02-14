@@ -72,4 +72,25 @@ const guard = (s) => {
     const tags = extractErrorTags(fn, source);
     expect(tags).toEqual(['NotFound']);
   });
+
+  test('handles err() with non-object argument', () => {
+    const source = createSourceFile(`const guard = (s) => err('stringError');`);
+    const fn = findFirstArrowFunction(source) as ts.ArrowFunction;
+    const tags = extractErrorTags(fn, source);
+    expect(tags).toEqual([]);
+  });
+
+  test('handles object literal without tag property', () => {
+    const source = createSourceFile(`const guard = (s) => err({ code: 404 });`);
+    const fn = findFirstArrowFunction(source) as ts.ArrowFunction;
+    const tags = extractErrorTags(fn, source);
+    expect(tags).toEqual([]);
+  });
+
+  test('handles tag property with non-string value', () => {
+    const source = createSourceFile(`const guard = (s) => err({ tag: 404 });`);
+    const fn = findFirstArrowFunction(source) as ts.ArrowFunction;
+    const tags = extractErrorTags(fn, source);
+    expect(tags).toEqual([]);
+  });
 });

@@ -96,6 +96,27 @@ const addItem = define({});
     const doc = extractVariableTSDoc('bar', source);
     expect(doc).toBeUndefined();
   });
+
+  test('extracts TSDoc from function declaration', () => {
+    const source = createSourceFile(`
+/** Validates input data */
+function validateInput(data) {
+  return data != null;
+}
+`);
+    const doc = extractVariableTSDoc('validateInput', source);
+    expect(doc).toBe('Validates input data');
+  });
+
+  test('returns undefined for function declaration without TSDoc', () => {
+    const source = createSourceFile(`
+function noDoc(data) {
+  return data;
+}
+`);
+    const doc = extractVariableTSDoc('noDoc', source);
+    expect(doc).toBeUndefined();
+  });
 });
 
 function findFirstArrayLiteral(

@@ -106,4 +106,88 @@ describe('cart.create', () => {
     expect(suites[0].tests[0].name).toBe('creates cart');
     expect(suites[0].tests[0].classification).toBe('success');
   });
+
+  test('handles test.skip()', () => {
+    const source = createSourceFile(`
+describe('cart.create', () => {
+  test.skip('pending test', () => {});
+});
+`);
+
+    const suites = parseTestSuites(source);
+    expect(suites[0].tests).toHaveLength(1);
+    expect(suites[0].tests[0].name).toBe('pending test');
+    expect(suites[0].tests[0].classification).toBe('unknown');
+  });
+
+  test('handles test.todo()', () => {
+    const source = createSourceFile(`
+describe('cart.create', () => {
+  test.todo('future test', () => {});
+});
+`);
+
+    const suites = parseTestSuites(source);
+    expect(suites[0].tests).toHaveLength(1);
+    expect(suites[0].tests[0].name).toBe('future test');
+    expect(suites[0].tests[0].classification).toBe('unknown');
+  });
+
+  test('classifies unknown when both isOk and isErr appear', () => {
+    const source = createSourceFile(`
+describe('cart.create', () => {
+  test('checks both outcomes', () => {
+    expect(isOk(r1)).toBe(true);
+    expect(isErr(r2)).toBe(true);
+  });
+});
+`);
+
+    const suites = parseTestSuites(source);
+    expect(suites[0].tests[0].classification).toBe('unknown');
+  });
+
+  test('handles describe with non-function callback', () => {
+    const source = createSourceFile(`
+describe('cart.create', someVariable);
+`);
+
+    const suites = parseTestSuites(source);
+    expect(suites).toHaveLength(0);
+  });
+
+  test('handles describe with non-string label', () => {
+    const source = createSourceFile(`
+describe(someVar, () => {
+  test('test', () => {});
+});
+`);
+
+    const suites = parseTestSuites(source);
+    expect(suites).toHaveLength(0);
+  });
+
+  test('handles it.skip()', () => {
+    const source = createSourceFile(`
+describe('domain.op', () => {
+  it.skip('skipped it test', () => {});
+});
+`);
+
+    const suites = parseTestSuites(source);
+    expect(suites[0].tests).toHaveLength(1);
+    expect(suites[0].tests[0].name).toBe('skipped it test');
+    expect(suites[0].tests[0].classification).toBe('unknown');
+  });
+
+  test('handles test with non-string label', () => {
+    const source = createSourceFile(`
+describe('domain.op', () => {
+  test(someVar, () => {});
+});
+`);
+
+    const suites = parseTestSuites(source);
+    expect(suites[0].tests).toHaveLength(0);
+  });
 });

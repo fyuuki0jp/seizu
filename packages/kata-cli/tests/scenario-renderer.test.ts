@@ -106,4 +106,87 @@ describe('renderScenarioSection', () => {
     const result = renderScenarioSection([], en);
     expect(result).toContain('_No scenarios defined_');
   });
+
+  test('renders empty input as dash', () => {
+    const emptyInputScenario: LinkedScenario = {
+      scenario: {
+        id: 'test.emptyInput',
+        description: undefined,
+        variableName: undefined,
+        steps: [
+          {
+            index: 0,
+            contractId: 'test.op',
+            inputLiteral: '{}',
+          },
+        ],
+        sourceFile: 'test.ts',
+        line: 1,
+      },
+      resolvedSteps: [
+        {
+          step: {
+            index: 0,
+            contractId: 'test.op',
+            inputLiteral: '{}',
+          },
+          contract: undefined,
+        },
+      ],
+    };
+
+    const result = renderScenarioSection([emptyInputScenario], en);
+    expect(result).toContain('| - |');
+  });
+
+  test('renders scenario without description using id as heading', () => {
+    const noDescScenario: LinkedScenario = {
+      scenario: {
+        id: 'test.noDescription',
+        description: undefined,
+        variableName: undefined,
+        steps: [],
+        sourceFile: 'test.ts',
+        line: 1,
+      },
+      resolvedSteps: [],
+    };
+
+    const result = renderScenarioSection([noDescScenario], en);
+    expect(result).toContain('### test.noDescription');
+  });
+
+  test('renders step with expect ok option', () => {
+    const okScenario: LinkedScenario = {
+      scenario: {
+        id: 'test.ok',
+        description: undefined,
+        variableName: undefined,
+        steps: [
+          {
+            index: 0,
+            contractId: 'op',
+            inputLiteral: '{ x: 1 }',
+            expect: 'ok',
+          },
+        ],
+        sourceFile: 'test.ts',
+        line: 1,
+      },
+      resolvedSteps: [
+        {
+          step: {
+            index: 0,
+            contractId: 'op',
+            inputLiteral: '{ x: 1 }',
+            expect: 'ok',
+          },
+          contract: undefined,
+        },
+      ],
+    };
+
+    const result = renderScenarioSection([okScenario], en);
+    expect(result).toContain('Success');
+  });
 });

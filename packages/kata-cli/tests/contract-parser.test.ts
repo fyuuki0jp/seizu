@@ -145,4 +145,114 @@ const x = define({
     expect(contracts).toHaveLength(1);
     expect(contracts[0].typeInfo.stateTypeName).toBe('unknown');
   });
+
+  test('parses contract with reference guards (identifiers in pre/post/invariant)', () => {
+    const source = createSourceFile(`
+import { define, err, pass } from 'kata';
+
+/** Cart must exist */
+const cartExistsGuard = (s) => s.exists ? pass : err({ tag: 'CartNotFound' as const });
+
+/** Count increases */
+const countUpCondition = (before, after) => after.items.size > before.items.size;
+
+/** Qty positive */
+const qtyPositiveInvariant = (s) => true;
+
+const addItem = define<S, I, E>({
+  id: 'cart.addItem',
+  pre: [cartExistsGuard],
+  transition: (s) => s,
+  post: [countUpCondition],
+  invariant: [qtyPositiveInvariant],
+});
+`);
+
+    const contracts = parseContracts(source);
+    expect(contracts).toHaveLength(1);
+    const c = contracts[0];
+
+    expect(c.guards).toHaveLength(1);
+    expect(c.guards[0].kind).toBe('reference');
+    expect(c.guards[0].referenceName).toBe('cartExistsGuard');
+    expect(c.guards[0].description).toBe('Cart must exist');
+    expect(c.guards[0].errorTags).toEqual(['CartNotFound']);
+
+    expect(c.conditions).toHaveLength(1);
+    expect(c.conditions[0].kind).toBe('reference');
+    expect(c.conditions[0].referenceName).toBe('countUpCondition');
+    expect(c.conditions[0].description).toBe('Count increases');
+
+    expect(c.invariants).toHaveLength(1);
+    expect(c.invariants[0].kind).toBe('reference');
+    expect(c.invariants[0].referenceName).toBe('qtyPositiveInvariant');
+    expect(c.invariants[0].description).toBe('Qty positive');
+  });
+
+  test('returns empty for define() with no arguments', () => {
+    const source = createSourceFile(`const x = define();`);
+    const contracts = parseContracts(source);
+    expect(contracts).toHaveLength(0);
+  });
+
+  test('returns empty for define() with non-object argument', () => {
+    const source = createSourceFile(`const x = define('string');`);
+    const contracts = parseContracts(source);
+    expect(contracts).toHaveLength(0);
+  });
+
+  test('returns empty for define() without id property', () => {
+    const source = createSourceFile(`
+const x = define({
+  pre: [],
+  transition: (s) => s,
+});
+`);
+    const contracts = parseContracts(source);
+    expect(contracts).toHaveLength(0);
+  });
+
+  test('handles define() not inside a variable declaration', () => {
+    const source = createSourceFile(`
+export default define<S, I, E>({
+  id: 'exported.contract',
+  pre: [],
+  transition: (s) => s,
+});
+`);
+    const contracts = parseContracts(source);
+    expect(contracts).toHaveLength(1);
+    expect(contracts[0].variableName).toBeUndefined();
+    expect(contracts[0].description).toBeUndefined();
+  });
+
+  test('handles guard with non-string id property value', () => {
+    const source = createSourceFile(`
+const x = define<S, I, E>({
+  id: 'test.guard',
+  pre: [
+    { id: someVariable, check: (s) => true, error: () => ({ tag: 'E' }) },
+  ],
+  transition: (s) => s,
+});
+`);
+    const contracts = parseContracts(source);
+    expect(contracts).toHaveLength(1);
+  });
+
+  test('handles guards that are function expressions', () => {
+    const source = createSourceFile(`
+const x = define<S, I, E>({
+  id: 'test.funcexpr',
+  pre: [
+    function guard(s) { return s.exists ? pass : err({ tag: 'NotFound' as const }); },
+  ],
+  transition: (s) => s,
+});
+`);
+    const contracts = parseContracts(source);
+    expect(contracts).toHaveLength(1);
+    expect(contracts[0].guards[0].errorTags).toEqual(['NotFound']);
+    expect(contracts[0].guards[0].kind).toBe('inline');
+  });
 });
