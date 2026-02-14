@@ -1,9 +1,16 @@
+import ts from 'typescript';
 import type { Messages } from '../i18n/types';
 import type { LinkedScenario } from '../types';
+import { renderFlowSection } from './flow-section';
+
+export interface ScenarioSectionRenderOptions {
+  readonly flowEnabled: boolean;
+}
 
 export function renderScenarioSection(
   scenarios: readonly LinkedScenario[],
-  messages: Messages
+  messages: Messages,
+  options: ScenarioSectionRenderOptions = { flowEnabled: true }
 ): string {
   const lines: string[] = [];
   const s = messages.scenarios;
@@ -43,18 +50,19 @@ export function renderScenarioSection(
     }
 
     lines.push('');
+
+    if (options.flowEnabled && scenario.flow) {
+      lines.push(renderFlowSection(scenario.flow, messages));
+    }
   }
 
   return lines.join('\n');
 }
 
 function formatInput(inputLiteral: string): string {
-  let text = inputLiteral.trimEnd();
-  // Strip TypeScript type assertion: `} as TypeName`
-  const asMatch = text.match(/^([\s\S]*\})\s+as\s+.+$/);
-  if (asMatch) {
-    text = asMatch[1];
-  }
+  const raw = inputLiteral.trim();
+  const text = stripTypeAssertion(raw);
+
   // Clean up object literal for table display
   const cleaned = text
     .replace(/^\{/, '')
@@ -63,4 +71,37 @@ function formatInput(inputLiteral: string): string {
     .replace(/,\s*$/, '')
     .trim();
   return cleaned || '-';
+}
+
+function stripTypeAssertion(input: string): string {
+  try {
+    const source = ts.createSourceFile(
+      'inline.ts',
+      `const __x = (${input});`,
+      ts.ScriptTarget.ES2022,
+      true,
+      ts.ScriptKind.TS
+    );
+    const stmt = source.statements[0];
+    if (!stmt || !ts.isVariableStatement(stmt)) {
+      return input;
+    }
+    const decl = stmt.declarationList.declarations[0];
+    if (!decl?.initializer) {
+      return input;
+    }
+
+    let expr: ts.Expression = decl.initializer;
+    if (ts.isParenthesizedExpression(expr)) {
+      expr = expr.expression;
+    }
+
+    while (ts.isAsExpression(expr) || ts.isTypeAssertionExpression(expr)) {
+      expr = expr.expression;
+    }
+
+    return expr.getText(source);
+  } catch {
+    return input;
+  }
 }

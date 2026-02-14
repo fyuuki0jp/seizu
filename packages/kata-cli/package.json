@@ -27,7 +27,8 @@
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
-    "doc:self": "tsx src/cli.ts doc --config kata-doc.config.ts"
+    "doc:self": "node --import tsx/esm src/cli.ts doc --config kata-doc.config.ts",
+    "doc:self:check": "node --import tsx/esm src/cli.ts doc --config kata-doc.config.ts --check"
   },
   "dependencies": {
     "kata": "workspace:*",

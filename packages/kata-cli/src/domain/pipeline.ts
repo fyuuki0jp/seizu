@@ -151,6 +151,7 @@ export const docRender = define<DocPipelineState, Record<string, never>, never>(
       const result = renderMarkdownScenario([], {
         title: state.title,
         description: state.description,
+        flowEnabled: state.flowEnabled,
         contracts: state.linked,
         scenarios: state.linkedScenarios,
         messages: state.messages,

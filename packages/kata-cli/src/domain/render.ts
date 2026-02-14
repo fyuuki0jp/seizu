@@ -1,5 +1,6 @@
 import { define, err, pass, scenario, step } from 'kata';
 import { renderCoverageSummary } from '../doc/renderer/coverage-section';
+import { renderFlowSection } from '../doc/renderer/flow-section';
 import { renderScenarioSection } from '../doc/renderer/scenario-section';
 import {
   renderContractHeader,
@@ -110,7 +111,9 @@ export const renderScenarios = define<
   ],
   transition: (lines, input) => [
     ...lines,
-    ...renderScenarioSection(input.scenarios, input.messages).split('\n'),
+    ...renderScenarioSection(input.scenarios, input.messages, {
+      flowEnabled: input.flowEnabled,
+    }).split('\n'),
   ],
   post: [
     /** Output lines increase after scenario section */
@@ -283,7 +286,7 @@ export const renderContractDetail = define<
   id: 'render.contractDetail',
   pre: [],
   transition: (lines, input) => {
-    const { contracts, hasScenarios, messages } = input;
+    const { contracts, hasScenarios, messages, flowEnabled } = input;
     const sorted = [...contracts].sort((a, b) =>
       a.contract.id.localeCompare(b.contract.id)
     );
@@ -296,6 +299,11 @@ export const renderContractDetail = define<
     for (const linked of sorted) {
       current.push('---', '');
       current.push(...renderContractHeader(linked, messages).split('\n'));
+      if (flowEnabled && linked.contract.flow) {
+        current.push(
+          ...renderFlowSection(linked.contract.flow, messages).split('\n')
+        );
+      }
       current.push(
         ...renderPreconditions(linked.contract.guards, messages).split('\n')
       );
@@ -355,6 +363,7 @@ export const renderMarkdownScenario = scenario<
         step(renderScenarios, {
           scenarios: input.scenarios,
           messages: input.messages,
+          flowEnabled: input.flowEnabled,
         })
       );
     }
@@ -378,6 +387,7 @@ export const renderMarkdownScenario = scenario<
         contracts: input.contracts,
         hasScenarios: input.scenarios.length > 0,
         messages: input.messages,
+        flowEnabled: input.flowEnabled,
       })
     );
 

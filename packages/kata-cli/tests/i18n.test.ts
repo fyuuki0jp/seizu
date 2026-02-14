@@ -65,6 +65,17 @@ describe('i18n', () => {
     expect(messages.coverage.untested).toBeTruthy();
     expect(typeof messages.coverage.summaryContract).toBe('function');
     expect(typeof messages.coverage.summaryErrorTag).toBe('function');
+
+    // flow
+    expect(messages.flow.detailsSummary).toBeTruthy();
+    expect(messages.flow.summaryTitle).toBeTruthy();
+    expect(messages.flow.summaryMetric).toBeTruthy();
+    expect(messages.flow.summaryValue).toBeTruthy();
+    expect(messages.flow.stepCount).toBeTruthy();
+    expect(messages.flow.branchCount).toBeTruthy();
+    expect(messages.flow.errorPathCount).toBeTruthy();
+    expect(messages.flow.unsupportedCount).toBeTruthy();
+    expect(typeof messages.flow.unsupportedWarning).toBe('function');
   }
 
   test('English locale has all keys', () => {

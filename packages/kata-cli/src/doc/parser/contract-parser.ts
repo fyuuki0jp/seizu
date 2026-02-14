@@ -1,4 +1,5 @@
 import ts from 'typescript';
+import { extractContractFlow } from '../flow';
 import type {
   ParsedCondition,
   ParsedContract,
@@ -58,6 +59,7 @@ function parseDefineCall(
   const guards = extractGuards(arg, sourceFile);
   const conditions = extractConditions(arg, sourceFile);
   const invariants = extractInvariants(arg, sourceFile);
+  const flow = extractContractFlow(arg, sourceFile, id);
   const variableName = findEnclosingVariableName(call);
   const tsdocDescription = variableName
     ? extractVariableTSDoc(variableName, sourceFile)
@@ -76,6 +78,7 @@ function parseDefineCall(
     guards,
     conditions,
     invariants,
+    flow,
     variableName,
     sourceFile: sourceFile.fileName,
     line,

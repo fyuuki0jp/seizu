@@ -28,6 +28,7 @@ function makeInitialState(
   return {
     title: 'Test Docs',
     description: 'Test description',
+    flowEnabled: true,
     messages,
     sourceFiles: [],
     contracts: [],

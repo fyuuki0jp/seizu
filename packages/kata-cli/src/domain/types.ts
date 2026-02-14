@@ -23,6 +23,7 @@ export interface SourceFileEntry {
 export interface DocPipelineState {
   readonly title: string;
   readonly description: string | undefined;
+  readonly flowEnabled: boolean;
   readonly messages: Messages;
   readonly sourceFiles: readonly string[];
   readonly contracts: readonly ParsedContract[];
@@ -88,6 +89,7 @@ export interface TocInput {
 export interface ScenarioSectionInput {
   readonly scenarios: readonly LinkedScenario[];
   readonly messages: Messages;
+  readonly flowEnabled: boolean;
 }
 
 export interface ContractHeaderInput {
@@ -129,11 +131,13 @@ export interface ContractDetailInput {
   readonly contracts: readonly LinkedContract[];
   readonly hasScenarios: boolean;
   readonly messages: Messages;
+  readonly flowEnabled: boolean;
 }
 
 export interface MarkdownInput {
   readonly title: string;
   readonly description: string | undefined;
+  readonly flowEnabled: boolean;
   readonly contracts: readonly LinkedContract[];
   readonly scenarios: readonly LinkedScenario[];
   readonly messages: Messages;

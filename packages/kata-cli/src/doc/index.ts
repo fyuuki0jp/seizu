@@ -1,21 +1,11 @@
 import { resolve } from 'node:path';
-import { analyzeCoverage } from './analyzer/coverage-analyzer';
+import { isOk } from 'kata';
+import { docGenerate } from '../domain/pipeline';
+import type { DocPipelineState, SourceFileEntry } from '../domain/types';
 import { getMessages } from './i18n/index';
-import { linkContractsToTests } from './linker/contract-test-linker';
-import { linkScenarios } from './linker/scenario-linker';
-import { parseContracts } from './parser/contract-parser';
-import { parseScenarios } from './parser/scenario-parser';
 import { createProgramFromFiles, resolveGlobs } from './parser/source-resolver';
-import { parseTestSuites } from './parser/test-parser';
 import { renderMarkdown } from './renderer/markdown';
-import type {
-  DocumentModel,
-  KataDocConfig,
-  LinkedScenario,
-  ParsedContract,
-  ParsedScenario,
-  ParsedTestSuite,
-} from './types';
+import type { KataDocConfig } from './types';
 
 export { analyzeCoverage } from './analyzer/coverage-analyzer';
 export type {
@@ -24,6 +14,15 @@ export type {
   ErrorTagCoverage,
 } from './analyzer/coverage-types';
 export { ConfigError, loadConfig } from './config';
+export type {
+  FlowArtifact,
+  FlowEdge,
+  FlowGraph,
+  FlowNode,
+  FlowNodeKind,
+  FlowOwnerKind,
+  FlowSummary,
+} from './flow';
 export { getMessages } from './i18n/index';
 export type { Locale, Messages } from './i18n/types';
 export type { DocumentModel, KataDocConfig, LinkedScenario } from './types';
@@ -49,6 +48,8 @@ export function generate(
   const testFiles = config.tests ? resolveGlobs(config.tests, basePath) : [];
 
   const allFiles = [...contractFiles, ...scenarioFiles, ...testFiles];
+  const flowEnabled = config.flow ?? true;
+
   if (allFiles.length === 0) {
     return renderMarkdown(
       {
@@ -58,7 +59,10 @@ export function generate(
         scenarios: [],
         sourceFiles: [],
       },
-      { messages }
+      {
+        messages,
+        flowEnabled,
+      }
     );
   }
 
@@ -67,54 +71,71 @@ export function generate(
     : undefined;
   const program = createProgramFromFiles(allFiles, tsconfigPath);
 
-  let allContracts: ParsedContract[] = [];
-  for (const filePath of contractFiles) {
-    const sourceFile = program.getSourceFile(filePath);
-    if (sourceFile) {
-      allContracts.push(...parseContracts(sourceFile));
+  const sourceFiles: SourceFileEntry[] = [];
+  for (const path of contractFiles) {
+    const sf = program.getSourceFile(path);
+    if (sf) {
+      sourceFiles.push({ path, kind: 'contract', sourceFile: sf });
     }
   }
 
-  // Parse scenarios from both scenario files and contract files
-  const allScenarios: ParsedScenario[] = [];
   const scenarioSources = new Set([...scenarioFiles, ...contractFiles]);
-  for (const filePath of scenarioSources) {
-    const sourceFile = program.getSourceFile(filePath);
-    if (sourceFile) {
-      allScenarios.push(...parseScenarios(sourceFile));
+  for (const path of scenarioSources) {
+    const sf = program.getSourceFile(path);
+    if (sf) {
+      sourceFiles.push({ path, kind: 'scenario', sourceFile: sf });
     }
   }
 
-  const allTestSuites: ParsedTestSuite[] = [];
-  for (const filePath of testFiles) {
-    const sourceFile = program.getSourceFile(filePath);
-    if (sourceFile) {
-      allTestSuites.push(...parseTestSuites(sourceFile));
+  for (const path of testFiles) {
+    const sf = program.getSourceFile(path);
+    if (sf) {
+      sourceFiles.push({ path, kind: 'test', sourceFile: sf });
     }
   }
 
-  if (options?.filterIds && options.filterIds.length > 0) {
-    const filterSet = new Set(options.filterIds);
-    allContracts = allContracts.filter((c) => filterSet.has(c.id));
-  }
+  const filterIds =
+    options?.filterIds && options.filterIds.length > 0
+      ? new Set(options.filterIds)
+      : undefined;
 
-  const linkedContracts = linkContractsToTests(allContracts, allTestSuites);
-  const linkedScenarios: LinkedScenario[] = linkScenarios(
-    allScenarios,
-    allContracts
-  );
-
-  const model: DocumentModel = {
+  const initialState: DocPipelineState = {
     title: config.title,
     description: config.description,
-    contracts: linkedContracts,
-    scenarios: linkedScenarios,
-    sourceFiles: allFiles,
+    flowEnabled,
+    messages,
+    sourceFiles: [],
+    contracts: [],
+    scenarios: [],
+    testSuites: [],
+    filtered: [],
+    linked: [],
+    linkedScenarios: [],
+    coverageReport: undefined,
+    markdown: '',
   };
 
-  const coverageReport = config.coverage
-    ? analyzeCoverage(linkedContracts)
-    : undefined;
+  const result = docGenerate(initialState, {
+    sourceFiles,
+    filterIds,
+    coverageEnabled: config.coverage ?? false,
+  });
 
-  return renderMarkdown(model, { messages, coverageReport });
+  if (isOk(result)) {
+    return result.value.markdown;
+  }
+
+  return renderMarkdown(
+    {
+      title: config.title,
+      description: config.description,
+      contracts: [],
+      scenarios: [],
+      sourceFiles: [],
+    },
+    {
+      messages,
+      flowEnabled,
+    }
+  );
 }

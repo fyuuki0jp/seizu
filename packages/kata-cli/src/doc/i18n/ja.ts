@@ -73,6 +73,18 @@ export const ja: Messages = {
     columnInput: '入力',
     noScenarios: '_シナリオ定義なし_',
   },
+  flow: {
+    detailsSummary: 'フローチャート (Mermaid)',
+    summaryTitle: 'Flow Summary',
+    summaryMetric: '指標',
+    summaryValue: '値',
+    stepCount: '処理ステップ数',
+    branchCount: '分岐数',
+    errorPathCount: 'エラー経路数',
+    unsupportedCount: '解析不能数',
+    unsupportedWarning: (count) =>
+      `> 注意: 未対応構文により ${count} 件の解析不能経路があります。`,
+  },
   contractDetail: {
     sectionTitle: 'Contract詳細',
   },

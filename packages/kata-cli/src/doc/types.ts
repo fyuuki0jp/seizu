@@ -1,3 +1,5 @@
+import type { FlowArtifact } from './flow';
+
 // ===== Parsed Contract Model =====
 
 export interface ParsedTypeInfo {
@@ -35,6 +37,7 @@ export interface ParsedContract {
   readonly guards: readonly ParsedGuard[];
   readonly conditions: readonly ParsedCondition[];
   readonly invariants: readonly ParsedInvariant[];
+  readonly flow?: FlowArtifact;
   readonly variableName: string | undefined;
   readonly sourceFile: string;
   readonly line: number;
@@ -70,6 +73,7 @@ export interface ParsedScenario {
   readonly description: string | undefined;
   readonly variableName: string | undefined;
   readonly steps: readonly ParsedScenarioStep[];
+  readonly flow?: FlowArtifact;
   readonly sourceFile: string;
   readonly line: number;
 }
@@ -111,4 +115,6 @@ export interface KataDocConfig {
   readonly tsconfig?: string;
   readonly locale?: Locale;
   readonly coverage?: boolean;
+  readonly flow?: boolean;
+  readonly flowDebugOutput?: string;
 }

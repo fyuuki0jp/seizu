@@ -1,4 +1,5 @@
 import ts from 'typescript';
+import { extractScenarioFlow } from '../flow';
 import type { ParsedScenario, ParsedScenarioStep } from '../types';
 import {
   extractStringProperty,
@@ -50,6 +51,7 @@ function parseScenarioCall(
   if (!id) return undefined;
 
   const steps = extractStepsFromFlow(arg, sourceFile, contractVarMap);
+  const flow = extractScenarioFlow(arg, sourceFile, id, contractVarMap);
   const variableName = findEnclosingVariableName(call);
   const tsdocDescription = variableName
     ? extractVariableTSDoc(variableName, sourceFile)
@@ -66,6 +68,7 @@ function parseScenarioCall(
     description,
     variableName,
     steps,
+    flow,
     sourceFile: sourceFile.fileName,
     line,
   };

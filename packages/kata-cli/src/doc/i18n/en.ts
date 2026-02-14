@@ -74,6 +74,18 @@ export const en: Messages = {
     columnInput: 'Input',
     noScenarios: '_No scenarios defined_',
   },
+  flow: {
+    detailsSummary: 'Flowchart (Mermaid)',
+    summaryTitle: 'Flow Summary',
+    summaryMetric: 'Metric',
+    summaryValue: 'Value',
+    stepCount: 'Processing steps',
+    branchCount: 'Branch count',
+    errorPathCount: 'Error path count',
+    unsupportedCount: 'Unanalyzable count',
+    unsupportedWarning: (count) =>
+      `> Warning: ${count} unsupported syntax path(s) were detected.`,
+  },
   contractDetail: {
     sectionTitle: 'Contract Details',
   },

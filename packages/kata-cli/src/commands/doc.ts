@@ -1,13 +1,15 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import type { CAC } from 'cac';
 import { isOk } from 'kata';
 import { ConfigError, loadConfig } from '../doc/config';
+import type { FlowArtifact } from '../doc/flow';
 import { getMessages } from '../doc/i18n/index';
 import {
   createProgramFromFiles,
   resolveGlobs,
 } from '../doc/parser/source-resolver';
+import { renderMarkdown } from '../doc/renderer/markdown';
 import { docGenerate } from '../domain/pipeline';
 import type { DocPipelineState, SourceFileEntry } from '../domain/types';
 
@@ -21,10 +23,22 @@ export function registerDocCommand(cli: CAC): void {
     .option('--title <title>', 'Document title (overrides config)')
     .option('--locale <locale>', 'Locale: en or ja', { default: 'en' })
     .option('--coverage', 'Include coverage summary', { default: false })
+    .option('--flow', 'Include flow visualization')
+    .option('--no-flow', 'Disable flow visualization')
+    .option('--check', 'Check output matches regenerated markdown')
+    .option(
+      '--flow-debug-output <path>',
+      'Write normalized flow artifacts JSON (debug only)'
+    )
     .option('--stdout', 'Write to stdout instead of file', { default: false })
     .action(async (contracts: string[], options) => {
       try {
         const { config } = await loadConfig(options.config);
+
+        const flowEnabled =
+          typeof options.flow === 'boolean'
+            ? options.flow
+            : (config.flow ?? true);
 
         const effectiveConfig = {
           ...config,
@@ -32,9 +46,12 @@ export function registerDocCommand(cli: CAC): void {
           ...(options.title ? { title: options.title } : {}),
           ...(options.locale ? { locale: options.locale } : {}),
           ...(options.coverage ? { coverage: true } : {}),
+          flow: flowEnabled,
+          ...(options.flowDebugOutput
+            ? { flowDebugOutput: options.flowDebugOutput }
+            : {}),
         };
 
-        // IO: resolve files
         const basePath = process.cwd();
         const messages = getMessages(effectiveConfig.locale ?? 'en');
         const contractFiles = resolveGlobs(effectiveConfig.contracts, basePath);
@@ -47,7 +64,6 @@ export function registerDocCommand(cli: CAC): void {
 
         const allFiles = [...contractFiles, ...scenarioFiles, ...testFiles];
 
-        // IO: create TypeScript program
         const tsconfigPath = effectiveConfig.tsconfig
           ? resolve(basePath, effectiveConfig.tsconfig)
           : undefined;
@@ -56,7 +72,6 @@ export function registerDocCommand(cli: CAC): void {
             ? createProgramFromFiles(allFiles, tsconfigPath)
             : undefined;
 
-        // Prepare source file entries (IO → Pure bridge)
         const sourceFiles: SourceFileEntry[] = [];
         if (program) {
           for (const path of contractFiles) {
@@ -80,12 +95,12 @@ export function registerDocCommand(cli: CAC): void {
           }
         }
 
-        // Pure: run kata pipeline
         const filterIds = contracts.length > 0 ? new Set(contracts) : undefined;
 
         const initialState: DocPipelineState = {
           title: effectiveConfig.title,
           description: effectiveConfig.description,
+          flowEnabled: effectiveConfig.flow ?? true,
           messages,
           sourceFiles: [],
           contracts: [],
@@ -99,10 +114,9 @@ export function registerDocCommand(cli: CAC): void {
         };
 
         let markdown: string;
+        let flowArtifacts: FlowArtifact[] = [];
 
         if (sourceFiles.length === 0) {
-          // No source files: render empty document
-          const { renderMarkdown } = await import('../doc/renderer/markdown');
           markdown = renderMarkdown(
             {
               title: effectiveConfig.title,
@@ -111,7 +125,7 @@ export function registerDocCommand(cli: CAC): void {
               scenarios: [],
               sourceFiles: [],
             },
-            { messages }
+            { messages, flowEnabled: effectiveConfig.flow ?? true }
           );
         } else {
           const result = docGenerate(initialState, {
@@ -122,6 +136,7 @@ export function registerDocCommand(cli: CAC): void {
 
           if (isOk(result)) {
             markdown = result.value.markdown;
+            flowArtifacts = collectFlowArtifacts(result.value);
           } else {
             console.error(
               `Pipeline failed at step ${result.error.stepIndex}: ${result.error.contractId}`
@@ -131,14 +146,49 @@ export function registerDocCommand(cli: CAC): void {
           }
         }
 
-        // IO: write output
+        if (effectiveConfig.flowDebugOutput) {
+          const outputPath = resolve(
+            process.cwd(),
+            effectiveConfig.flowDebugOutput
+          );
+          mkdirSync(dirname(outputPath), { recursive: true });
+          writeFileSync(
+            outputPath,
+            serializeFlowArtifacts(flowArtifacts),
+            'utf-8'
+          );
+          console.log(`Flow debug JSON written to ${outputPath}`);
+        }
+
+        const outputPath = resolve(
+          process.cwd(),
+          effectiveConfig.output ?? 'docs/contracts.md'
+        );
+
+        if (options.check) {
+          if (!existsSync(outputPath)) {
+            console.error(`Documentation file not found: ${outputPath}`);
+            process.exit(1);
+            return;
+          }
+
+          const existing = readFileSync(outputPath, 'utf-8');
+          if (existing !== markdown) {
+            console.error(
+              `Documentation is out of date: ${outputPath}\nRun: kata doc --config ${options.config}`
+            );
+            process.exit(1);
+            return;
+          }
+
+          console.log(`Documentation is up to date: ${outputPath}`);
+          process.exit(0);
+          return;
+        }
+
         if (options.stdout) {
           process.stdout.write(markdown);
         } else {
-          const outputPath = resolve(
-            process.cwd(),
-            effectiveConfig.output ?? 'docs/contracts.md'
-          );
           mkdirSync(dirname(outputPath), { recursive: true });
           writeFileSync(outputPath, markdown, 'utf-8');
           console.log(`Documentation written to ${outputPath}`);
@@ -153,4 +203,30 @@ export function registerDocCommand(cli: CAC): void {
         throw error;
       }
     });
+}
+
+function collectFlowArtifacts(state: DocPipelineState): FlowArtifact[] {
+  const artifacts: FlowArtifact[] = [];
+
+  for (const linked of state.linked) {
+    if (linked.contract.flow) {
+      artifacts.push(linked.contract.flow);
+    }
+  }
+
+  for (const linked of state.linkedScenarios) {
+    if (linked.scenario.flow) {
+      artifacts.push(linked.scenario.flow);
+    }
+  }
+
+  return artifacts.sort((a, b) => {
+    const ownerCmp = a.ownerKind.localeCompare(b.ownerKind);
+    if (ownerCmp !== 0) return ownerCmp;
+    return a.ownerId.localeCompare(b.ownerId);
+  });
+}
+
+function serializeFlowArtifacts(artifacts: readonly FlowArtifact[]): string {
+  return `${JSON.stringify(artifacts, null, 2)}\n`;
 }

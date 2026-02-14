@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+import type { FlowArtifact } from '../src/doc/flow';
 import { getMessages } from '../src/doc/i18n/index';
 import { renderMarkdown } from '../src/doc/renderer/markdown';
 import type { DocumentModel } from '../src/doc/types';
@@ -342,5 +343,60 @@ describe('renderMarkdown', () => {
     const aPos = markdown.indexOf('## a.first');
     const zPos = markdown.indexOf('## z.last');
     expect(aPos).toBeLessThan(zPos);
+  });
+
+  test('renders flow hash, mermaid and summary when flow exists', () => {
+    const flow: FlowArtifact = {
+      ownerKind: 'contract',
+      ownerId: 'flow.contract',
+      hash: 'abc123',
+      mermaid: ['```mermaid', 'flowchart TD', '  n1["start"]', '```'].join(
+        '\n'
+      ),
+      summary: {
+        stepCount: 3,
+        branchCount: 1,
+        errorPathCount: 1,
+        unsupportedCount: 0,
+      },
+      graph: {
+        nodes: [],
+        edges: [],
+      },
+    };
+
+    const flowModel: DocumentModel = {
+      title: 'Flow Test',
+      description: undefined,
+      contracts: [
+        {
+          contract: {
+            id: 'flow.contract',
+            description: undefined,
+            typeInfo: {
+              stateTypeName: 'S',
+              inputTypeName: 'I',
+              errorTypeName: 'E',
+            },
+            guards: [],
+            conditions: [],
+            invariants: [],
+            flow,
+            variableName: undefined,
+            sourceFile: 'test.ts',
+            line: 1,
+          },
+          testSuite: undefined,
+        },
+      ],
+      scenarios: [],
+      sourceFiles: ['test.ts'],
+    };
+
+    const markdown = renderMarkdown(flowModel, { messages: en });
+    expect(markdown).toContain('<!-- flow-hash: abc123 -->');
+    expect(markdown).toContain('<details>');
+    expect(markdown).toContain('Flow Summary');
+    expect(markdown).toContain('Processing steps');
   });
 });

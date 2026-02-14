@@ -75,6 +75,17 @@ export interface Messages {
     readonly columnInput: string;
     readonly noScenarios: string;
   };
+  readonly flow: {
+    readonly detailsSummary: string;
+    readonly summaryTitle: string;
+    readonly summaryMetric: string;
+    readonly summaryValue: string;
+    readonly stepCount: string;
+    readonly branchCount: string;
+    readonly errorPathCount: string;
+    readonly unsupportedCount: string;
+    readonly unsupportedWarning: (count: number) => string;
+  };
   readonly contractDetail: {
     readonly sectionTitle: string;
   };

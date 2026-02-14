@@ -34,3 +34,4 @@ pnpm-debug.log*
 .astro/
 
 # Misc
+contracts.flow.json

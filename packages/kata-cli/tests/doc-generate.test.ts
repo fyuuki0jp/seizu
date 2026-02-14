@@ -19,6 +19,8 @@ describe('generate', () => {
     expect(markdown).toContain('cart.create');
     expect(markdown).toContain('cart.addItem');
     expect(markdown).toContain('cart.removeItem');
+    expect(markdown).toContain('<!-- flow-hash:');
+    expect(markdown).toContain('Flow Summary');
 
     vi.restoreAllMocks();
   });

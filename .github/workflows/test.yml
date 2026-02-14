@@ -32,5 +32,8 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Check generated contract docs are up to date
+        run: pnpm --filter kata-cli doc:self:check
+
       - name: Test with coverage
         run: pnpm test:coverage
