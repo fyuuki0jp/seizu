@@ -1,6 +1,6 @@
-# Contributing to RISE
+# Contributing to seizu
 
-Thank you for your interest in contributing to RISE! This document provides guidelines and information about contributing.
+Thank you for your interest in contributing to seizu! This document provides guidelines and information about contributing.
 
 ## Development Setup
 
@@ -14,8 +14,8 @@ Thank you for your interest in contributing to RISE! This document provides guid
 1. Fork the repository
 2. Clone your fork:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/rise.git
-   cd rise
+   git clone https://github.com/YOUR_USERNAME/seizu.git
+   cd seizu
    ```
 3. Install dependencies:
    ```bash
@@ -75,11 +75,11 @@ Example: `feat: add snapshot interval configuration`
 
 ## License
 
-By contributing to RISE, you agree that your contributions will be licensed under the MIT License.
+By contributing to seizu, you agree that your contributions will be licensed under the MIT License.
 
 ## Test Coverage
 
-RISE maintains high test coverage (≥80% for all metrics). 
+seizu maintains high test coverage (≥80% for all metrics). 
 
 ### Running Coverage Tests
 

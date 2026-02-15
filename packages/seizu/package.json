@@ -13,7 +13,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/fyuuki0jp/rise.git",
+    "url": "git+https://github.com/fyuuki0jp/seizu.git",
     "directory": "packages/seizu"
   },
   "publishConfig": {

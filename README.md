@@ -23,8 +23,8 @@ pnpm lint
 
 ## Links
 
-- [Documentation](https://fyuuki0jp.github.io/rise/)
-- [Contract Specification](https://fyuuki0jp.github.io/rise/en/contracts/) (dogfooding)
+- [Documentation](https://fyuuki0jp.github.io/seizu/)
+- [Contract Specification](https://fyuuki0jp.github.io/seizu/en/contracts/) (dogfooding)
 
 ## License
 

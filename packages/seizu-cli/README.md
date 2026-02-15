@@ -1,6 +1,6 @@
 # seizu-cli
 
-CLI tooling for [seizu](https://github.com/fyuuki0jp/rise/tree/main/packages/seizu) contracts. Static analysis, documentation generation, and Property-Based Testing verification.
+CLI tooling for [seizu](https://github.com/fyuuki0jp/seizu/tree/main/packages/seizu) contracts. Static analysis, documentation generation, and Property-Based Testing verification.
 
 ## Install
 
