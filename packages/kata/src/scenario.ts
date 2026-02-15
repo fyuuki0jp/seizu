@@ -27,6 +27,7 @@ type AnyStep<TState> = StepDef<TState, unknown, unknown>;
 
 export interface ScenarioDef<TState, TInput> {
   readonly id: string;
+  readonly accepts?: readonly string[];
   readonly description?: string;
   readonly flow: (input: TInput) => ReadonlyArray<AnyStep<TState>>;
 }

@@ -29,6 +29,10 @@ import type {
 
 export const docParse = define<DocPipelineState, ParseInput, PipelineError>({
   id: 'doc.parse',
+  accepts: [
+    'ソースファイルからContract・Scenario・テストをパースできる',
+    'ソースファイルが未指定の場合はエラーを返す',
+  ],
   pre: [
     /** Source files must not be empty */
     (_, input) =>
@@ -77,6 +81,7 @@ export const docParse = define<DocPipelineState, ParseInput, PipelineError>({
 
 export const docFilter = define<DocPipelineState, FilterInput, never>({
   id: 'doc.filter',
+  accepts: ['指定されたIDでContractをフィルタリングできる'],
   pre: [],
   transition: (state, input) => {
     if (input.filterIds && input.filterIds.size > 0) {
@@ -100,6 +105,7 @@ export const docFilter = define<DocPipelineState, FilterInput, never>({
 
 export const docLink = define<DocPipelineState, Record<string, never>, never>({
   id: 'doc.link',
+  accepts: ['Contractとテストスイートを紐付けできる'],
   pre: [],
   transition: (state) => {
     const linked = linkContractsToTests(state.filtered, state.testSuites);
@@ -116,6 +122,7 @@ export const docLink = define<DocPipelineState, Record<string, never>, never>({
 
 export const docAnalyze = define<DocPipelineState, AnalyzeInput, never>({
   id: 'doc.analyze',
+  accepts: ['テストカバレッジを分析してレポートを生成できる'],
   pre: [],
   transition: (state, input) => {
     if (!input.enabled) {
@@ -136,6 +143,7 @@ export const docAnalyze = define<DocPipelineState, AnalyzeInput, never>({
 export const docRender = define<DocPipelineState, Record<string, never>, never>(
   {
     id: 'doc.render',
+    accepts: ['パイプライン状態からMarkdownドキュメントを生成できる'],
     pre: [],
     transition: (state) => {
       const result = renderMarkdownScenario([], {
@@ -182,6 +190,7 @@ export const docRender = define<DocPipelineState, Record<string, never>, never>(
 
 export const docGenerate = scenario<DocPipelineState, GenerateInput>({
   id: 'doc.generate',
+  accepts: ['ソースファイルからContract仕様書を自動生成できる'],
   description: 'ドキュメント生成パイプライン',
   flow: (input) => [
     step(docParse, { sourceFiles: input.sourceFiles }),
@@ -201,6 +210,7 @@ export const coverageGenerate = scenario<
   CoverageGenerateInput
 >({
   id: 'coverage.generate',
+  accepts: ['テストカバレッジレポートを生成できる'],
   description: 'カバレッジ分析パイプライン',
   flow: (input) => [
     step(docParse, { sourceFiles: input.sourceFiles }),

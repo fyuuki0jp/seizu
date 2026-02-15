@@ -66,6 +66,10 @@ describe('i18n', () => {
     expect(typeof messages.coverage.summaryContract).toBe('function');
     expect(typeof messages.coverage.summaryErrorTag).toBe('function');
 
+    // accepts
+    expect(messages.accepts.title).toBeTruthy();
+    expect(messages.accepts.description).toBeTruthy();
+
     // flow
     expect(messages.flow.detailsSummary).toBeTruthy();
     expect(messages.flow.summaryTitle).toBeTruthy();

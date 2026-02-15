@@ -8,6 +8,7 @@ import type {
   ParsedTypeInfo,
 } from '../types';
 import {
+  extractStringArrayProperty,
   extractStringProperty,
   findArrayProperty,
   findEnclosingVariableName,
@@ -55,6 +56,7 @@ function parseDefineCall(
   const id = extractStringProperty(arg, 'id');
   if (!id) return undefined;
 
+  const accepts = extractStringArrayProperty(arg, 'accepts');
   const typeInfo = extractTypeInfo(call, sourceFile);
   const guards = extractGuards(arg, sourceFile);
   const conditions = extractConditions(arg, sourceFile);
@@ -73,6 +75,7 @@ function parseDefineCall(
 
   return {
     id,
+    accepts,
     description,
     typeInfo,
     guards,

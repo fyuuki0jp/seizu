@@ -4,6 +4,7 @@ import type { ParsedContract, ParsedTestSuite } from '../src/doc/types';
 
 const makeContract = (id: string): ParsedContract => ({
   id,
+  accepts: [],
   description: undefined,
   typeInfo: {
     stateTypeName: 'S',

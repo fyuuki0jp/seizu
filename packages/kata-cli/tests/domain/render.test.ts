@@ -24,6 +24,7 @@ const messages = getMessages('en');
 function makeContract(overrides: Partial<ParsedContract> = {}): ParsedContract {
   return {
     id: 'test.contract',
+    accepts: [],
     description: 'Test contract description',
     typeInfo: {
       stateTypeName: 'TestState',
@@ -91,6 +92,7 @@ function makeLinkedScenario(): LinkedScenario {
   return {
     scenario: {
       id: 'test.flow',
+      accepts: [],
       description: 'Test scenario flow',
       variableName: 'testFlow',
       steps: [
@@ -237,6 +239,52 @@ describe('render.scenarioSection', () => {
 // === pure section renderers ===
 
 describe('render pure sections', () => {
+  test('renders accepts section when contract has accepts', () => {
+    const contractWithAccepts = makeContract({
+      accepts: ['Users can create accounts', 'Users can log in'],
+    });
+    const lines = renderContractSections([], {
+      contracts: [{ contract: contractWithAccepts, testSuite: undefined }],
+      hasScenarios: false,
+      messages,
+      flowEnabled: true,
+    });
+    const text = lines.join('\n');
+    expect(text).toContain('### Acceptance Criteria');
+    expect(text).toContain('- Users can create accounts');
+    expect(text).toContain('- Users can log in');
+  });
+
+  test('does not render accepts section when accepts is empty', () => {
+    const lines = renderContractSections([], {
+      contracts: [makeLinked()],
+      hasScenarios: false,
+      messages,
+      flowEnabled: true,
+    });
+    const text = lines.join('\n');
+    expect(text).not.toContain('Acceptance Criteria');
+  });
+
+  test('renders heading, accepts, then type table in order', () => {
+    const contractWithAccepts = makeContract({
+      id: 'order.test',
+      accepts: ['Requirement 1'],
+    });
+    const lines = renderContractSections([], {
+      contracts: [{ contract: contractWithAccepts, testSuite: undefined }],
+      hasScenarios: false,
+      messages,
+      flowEnabled: true,
+    });
+    const text = lines.join('\n');
+    const headingPos = text.indexOf('## order.test');
+    const acceptsPos = text.indexOf('### Acceptance Criteria');
+    const typeTablePos = text.indexOf('| Property |');
+    expect(headingPos).toBeLessThan(acceptsPos);
+    expect(acceptsPos).toBeLessThan(typeTablePos);
+  });
+
   test('renders all contract detail sections', () => {
     const lines = renderContractSections([], {
       contracts: [makeLinked()],

@@ -85,6 +85,10 @@ export const ja: Messages = {
     unsupportedWarning: (count) =>
       `> 注意: 未対応構文により ${count} 件の解析不能経路があります。`,
   },
+  accepts: {
+    title: '受け入れ条件',
+    description: 'このContractが担保するビジネス要求です。',
+  },
   contractDetail: {
     sectionTitle: 'Contract詳細',
   },

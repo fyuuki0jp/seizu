@@ -7,10 +7,7 @@ import type {
   ParsedTestCase,
 } from '../types';
 
-export function renderContractHeader(
-  linked: LinkedContract,
-  messages: Messages
-): string {
+export function renderContractHeading(linked: LinkedContract): string {
   const { contract } = linked;
   const lines: string[] = [];
 
@@ -31,6 +28,34 @@ export function renderContractHeader(
       lines.push('');
     }
   }
+
+  return lines.join('\n');
+}
+
+export function renderAccepts(
+  accepts: readonly string[],
+  messages: Messages
+): string {
+  if (accepts.length === 0) return '';
+
+  const lines: string[] = [];
+  lines.push(`### ${messages.accepts.title}`);
+  lines.push('');
+  lines.push(`> ${messages.accepts.description}`);
+  lines.push('');
+  for (const a of accepts) {
+    lines.push(`- ${a}`);
+  }
+  lines.push('');
+  return lines.join('\n');
+}
+
+export function renderTypeTable(
+  linked: LinkedContract,
+  messages: Messages
+): string {
+  const { contract } = linked;
+  const lines: string[] = [];
 
   lines.push(
     `| ${messages.typeTable.headerItem} | ${messages.typeTable.headerType} |`

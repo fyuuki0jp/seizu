@@ -5,6 +5,7 @@ import type { ParsedContract, ParsedScenario } from '../src/doc/types';
 function makeContract(id: string, variableName?: string): ParsedContract {
   return {
     id,
+    accepts: [],
     description: undefined,
     typeInfo: {
       stateTypeName: 'S',
@@ -26,6 +27,7 @@ function makeScenario(
 ): ParsedScenario {
   return {
     id,
+    accepts: [],
     description: undefined,
     variableName: undefined,
     steps,

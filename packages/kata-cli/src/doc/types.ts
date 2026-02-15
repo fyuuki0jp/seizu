@@ -34,6 +34,7 @@ export interface ParsedInvariant {
 
 export interface ParsedContract {
   readonly id: string;
+  readonly accepts: readonly string[];
   readonly description: string | undefined;
   readonly typeInfo: ParsedTypeInfo;
   readonly guards: readonly ParsedGuard[];
@@ -72,6 +73,7 @@ export interface ParsedScenarioStep {
 
 export interface ParsedScenario {
   readonly id: string;
+  readonly accepts: readonly string[];
   readonly description: string | undefined;
   readonly variableName: string | undefined;
   readonly steps: readonly ParsedScenarioStep[];

@@ -58,6 +58,14 @@ describe('integration', () => {
     expect(markdown).toContain('カートがまだ存在していないこと');
     expect(markdown).toContain('`AlreadyExists`');
 
+    // cart.create accepts
+    expect(markdown).toContain('### 受け入れ条件');
+    expect(markdown).toContain('- ユーザーは新しいカートを作成できる');
+    expect(markdown).toContain('- 既にカートが存在する場合はエラーが返される');
+
+    // cart.addItem accepts
+    expect(markdown).toContain('- カートに新しいアイテムを追加できる');
+
     // cart.addItem
     expect(markdown).toContain('## cart.addItem - カートにアイテムを追加する');
     expect(markdown).toContain('カートが存在していること');
@@ -112,6 +120,12 @@ describe('integration', () => {
         sourceFiles: [contractPath, testPath],
       },
       { messages: en }
+    );
+
+    // Accepts section (English)
+    expect(markdown).toContain('### Acceptance Criteria');
+    expect(markdown).toContain(
+      '> Business requirements that this contract fulfills.'
     );
 
     // English section headers

@@ -86,6 +86,10 @@ export interface Messages {
     readonly unsupportedCount: string;
     readonly unsupportedWarning: (count: number) => string;
   };
+  readonly accepts: {
+    readonly title: string;
+    readonly description: string;
+  };
   readonly contractDetail: {
     readonly sectionTitle: string;
   };

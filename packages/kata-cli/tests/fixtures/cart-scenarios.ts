@@ -45,6 +45,7 @@ const addItem = define<
 /** 通常の購入フロー */
 export const normalPurchase = scenario({
   id: 'cart.normalPurchase',
+  accepts: ['ユーザーは複数のアイテムをカートに入れて購入できる'],
   description: '通常の購入フロー',
   flow: (input: { userId: string }) => [
     step(createCart, { userId: input.userId }),

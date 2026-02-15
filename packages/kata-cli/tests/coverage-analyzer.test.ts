@@ -8,6 +8,7 @@ describe('analyzeCoverage', () => {
       {
         contract: {
           id: 'cart.addItem',
+          accepts: [],
           description: 'Add item',
           typeInfo: {
             stateTypeName: 'S',
@@ -86,6 +87,7 @@ describe('analyzeCoverage', () => {
       {
         contract: {
           id: 'order.create',
+          accepts: [],
           description: undefined,
           typeInfo: {
             stateTypeName: 'S',
@@ -128,6 +130,7 @@ describe('analyzeCoverage', () => {
       {
         contract: {
           id: 'cart.addItem',
+          accepts: [],
           description: undefined,
           typeInfo: {
             stateTypeName: 'S',
@@ -199,6 +202,7 @@ describe('analyzeCoverage', () => {
       {
         contract: {
           id: 'simple.op',
+          accepts: [],
           description: undefined,
           typeInfo: {
             stateTypeName: 'S',
@@ -241,6 +245,7 @@ describe('analyzeCoverage', () => {
       {
         contract: {
           id: 'test.op',
+          accepts: [],
           description: undefined,
           typeInfo: {
             stateTypeName: 'S',
@@ -286,6 +291,7 @@ describe('analyzeCoverage', () => {
       {
         contract: {
           id: 'a',
+          accepts: [],
           description: undefined,
           typeInfo: {
             stateTypeName: 'S',
@@ -323,6 +329,7 @@ describe('analyzeCoverage', () => {
       {
         contract: {
           id: 'b',
+          accepts: [],
           description: undefined,
           typeInfo: {
             stateTypeName: 'S',
@@ -349,6 +356,7 @@ describe('analyzeCoverage', () => {
       {
         contract: {
           id: 'c',
+          accepts: [],
           description: undefined,
           typeInfo: {
             stateTypeName: 'S',

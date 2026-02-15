@@ -271,6 +271,50 @@ const x = define<S, I, E>({
     expect(contracts[0].description).toBe('Inline description');
   });
 
+  test('parses accepts field', () => {
+    const source = createSourceFile(`
+const x = define<S, I, E>({
+  id: 'test.accepts',
+  accepts: ['Requirement A', 'Requirement B'],
+  pre: [],
+  transition: (s) => s,
+});
+`);
+
+    const contracts = parseContracts(source);
+    expect(contracts).toHaveLength(1);
+    expect(contracts[0].accepts).toEqual(['Requirement A', 'Requirement B']);
+  });
+
+  test('parses accepts with as const', () => {
+    const source = createSourceFile(`
+const x = define<S, I, E>({
+  id: 'test.asconst',
+  accepts: ['Immutable req'] as const,
+  pre: [],
+  transition: (s) => s,
+});
+`);
+
+    const contracts = parseContracts(source);
+    expect(contracts).toHaveLength(1);
+    expect(contracts[0].accepts).toEqual(['Immutable req']);
+  });
+
+  test('defaults accepts to empty array when not present', () => {
+    const source = createSourceFile(`
+const x = define<S, I, E>({
+  id: 'test.noacc',
+  pre: [],
+  transition: (s) => s,
+});
+`);
+
+    const contracts = parseContracts(source);
+    expect(contracts).toHaveLength(1);
+    expect(contracts[0].accepts).toEqual([]);
+  });
+
   test('prefers TSDoc over description property', () => {
     const source = createSourceFile(`
 /** TSDoc description */

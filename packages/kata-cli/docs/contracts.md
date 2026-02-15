@@ -10,6 +10,12 @@
 
 > `doc.generate`
 
+### Acceptance Criteria
+
+> Business requirements that this contract fulfills.
+
+- ソースファイルからContract仕様書を自動生成できる
+
 | # | Operation | Input |
 |---|------|------|
 | 1 | `doc.parse` | sourceFiles: input.sourceFiles |
@@ -54,6 +60,12 @@ flowchart TD
 
 > `coverage.generate`
 
+### Acceptance Criteria
+
+> Business requirements that this contract fulfills.
+
+- テストカバレッジレポートを生成できる
+
 | # | Operation | Input |
 |---|------|------|
 | 1 | `doc.parse` | sourceFiles: input.sourceFiles |
@@ -94,6 +106,12 @@ flowchart TD
 ### Markdown ドキュメントの前半組み立て
 
 > `render.markdown`
+
+### Acceptance Criteria
+
+> Business requirements that this contract fulfills.
+
+- タイトル・シナリオ・目次をMarkdownとして組み立てられる
 
 | # | Operation | Input |
 |---|------|------|
@@ -155,6 +173,12 @@ flowchart TD
 ---
 
 ## doc.analyze
+
+### Acceptance Criteria
+
+> Business requirements that this contract fulfills.
+
+- テストカバレッジを分析してレポートを生成できる
 
 | Property | Type |
 |------|-----|
@@ -236,6 +260,12 @@ _No errors defined_
 
 ## doc.filter
 
+### Acceptance Criteria
+
+> Business requirements that this contract fulfills.
+
+- 指定されたIDでContractをフィルタリングできる
+
 | Property | Type |
 |------|-----|
 | State | `DocPipelineState` |
@@ -314,6 +344,12 @@ _No errors defined_
 
 ## doc.link
 
+### Acceptance Criteria
+
+> Business requirements that this contract fulfills.
+
+- Contractとテストスイートを紐付けできる
+
 | Property | Type |
 |------|-----|
 | State | `DocPipelineState` |
@@ -388,6 +424,13 @@ _No errors defined_
 ---
 
 ## doc.parse
+
+### Acceptance Criteria
+
+> Business requirements that this contract fulfills.
+
+- ソースファイルからContract・Scenario・テストをパースできる
+- ソースファイルが未指定の場合はエラーを返す
 
 | Property | Type |
 |------|-----|
@@ -489,6 +532,12 @@ _Not defined_
 
 ## doc.render
 
+### Acceptance Criteria
+
+> Business requirements that this contract fulfills.
+
+- パイプライン状態からMarkdownドキュメントを生成できる
+
 | Property | Type |
 |------|-----|
 | State | `DocPipelineState` |
@@ -576,6 +625,12 @@ _No errors defined_
 
 ## render.scenarioSection
 
+### Acceptance Criteria
+
+> Business requirements that this contract fulfills.
+
+- シナリオセクションをレンダリングできる
+
 | Property | Type |
 |------|-----|
 | State | `readonly string[]` |
@@ -654,6 +709,12 @@ _Not defined_
 ---
 
 ## render.title
+
+### Acceptance Criteria
+
+> Business requirements that this contract fulfills.
+
+- ドキュメントのタイトルと説明をレンダリングできる
 
 | Property | Type |
 |------|-----|
@@ -741,6 +802,12 @@ _Not defined_
 ---
 
 ## render.toc
+
+### Acceptance Criteria
+
+> Business requirements that this contract fulfills.
+
+- 2つ以上のContractがある場合に目次を生成できる
 
 | Property | Type |
 |------|-----|
@@ -849,6 +916,12 @@ _Not defined_
 
 ## report.replay
 
+### Acceptance Criteria
+
+> Business requirements that this contract fulfills.
+
+- 失敗したPBT検証のリプレイコマンドを生成できる
+
 | Property | Type |
 |------|-----|
 | State | `string` |
@@ -933,6 +1006,12 @@ flowchart TD
 ---
 
 ## report.summary
+
+### Acceptance Criteria
+
+> Business requirements that this contract fulfills.
+
+- PBT検証結果のサマリーレポートを生成できる
 
 | Property | Type |
 |------|-----|

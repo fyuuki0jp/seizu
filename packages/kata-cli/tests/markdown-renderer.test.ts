@@ -15,6 +15,7 @@ describe('renderMarkdown', () => {
       {
         contract: {
           id: 'cart.addItem',
+          accepts: [],
           description:
             'Add an item to the cart\n\nOnly possible when the cart exists and item is not duplicate.',
           typeInfo: {
@@ -136,6 +137,7 @@ describe('renderMarkdown', () => {
         {
           contract: {
             id: 'test.minimal',
+            accepts: [],
             description: undefined,
             typeInfo: {
               stateTypeName: 'S',
@@ -169,6 +171,7 @@ describe('renderMarkdown', () => {
         {
           contract: {
             id: 'test.failure',
+            accepts: [],
             description: undefined,
             typeInfo: {
               stateTypeName: 'S',
@@ -213,6 +216,7 @@ describe('renderMarkdown', () => {
         {
           contract: {
             id: 'test.failure2',
+            accepts: [],
             description: undefined,
             typeInfo: {
               stateTypeName: 'S',
@@ -256,6 +260,7 @@ describe('renderMarkdown', () => {
         {
           contract: {
             id: 'cart.create',
+            accepts: [],
             description: undefined,
             typeInfo: {
               stateTypeName: 'S',
@@ -276,6 +281,7 @@ describe('renderMarkdown', () => {
         {
           scenario: {
             id: 'flow.purchase',
+            accepts: [],
             description: undefined,
             variableName: undefined,
             steps: [],
@@ -301,6 +307,7 @@ describe('renderMarkdown', () => {
         {
           contract: {
             id: 'z.last',
+            accepts: [],
             description: undefined,
             typeInfo: {
               stateTypeName: 'S',
@@ -319,6 +326,7 @@ describe('renderMarkdown', () => {
         {
           contract: {
             id: 'a.first',
+            accepts: [],
             description: undefined,
             typeInfo: {
               stateTypeName: 'S',
@@ -372,6 +380,7 @@ describe('renderMarkdown', () => {
         {
           contract: {
             id: 'flow.contract',
+            accepts: [],
             description: undefined,
             typeInfo: {
               stateTypeName: 'S',

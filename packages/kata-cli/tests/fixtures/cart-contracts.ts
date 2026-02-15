@@ -30,6 +30,10 @@ type ItemNotFound = {
  */
 export const createCart = define<CartState, { userId: string }, AlreadyExists>({
   id: 'cart.create',
+  accepts: [
+    'ユーザーは新しいカートを作成できる',
+    '既にカートが存在する場合はエラーが返される',
+  ],
   pre: [
     /** カートがまだ存在していないこと */
     (s) => (!s.exists ? pass : err({ tag: 'AlreadyExists' as const })),
@@ -53,6 +57,7 @@ export const addItem = define<
   CartNotFound | DuplicateItem
 >({
   id: 'cart.addItem',
+  accepts: ['カートに新しいアイテムを追加できる'] as const,
   pre: [
     /** カートが存在していること */
     (s) => (s.exists ? pass : err({ tag: 'CartNotFound' as const })),

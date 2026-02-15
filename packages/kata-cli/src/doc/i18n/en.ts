@@ -86,6 +86,10 @@ export const en: Messages = {
     unsupportedWarning: (count) =>
       `> Warning: ${count} unsupported syntax path(s) were detected.`,
   },
+  accepts: {
+    title: 'Acceptance Criteria',
+    description: 'Business requirements that this contract fulfills.',
+  },
   contractDetail: {
     sectionTitle: 'Contract Details',
   },

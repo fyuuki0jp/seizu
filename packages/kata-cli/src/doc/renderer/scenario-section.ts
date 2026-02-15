@@ -2,6 +2,7 @@ import ts from 'typescript';
 import type { Messages } from '../i18n/types';
 import type { LinkedScenario } from '../types';
 import { renderFlowSection } from './flow-section';
+import { renderAccepts } from './sections';
 
 export interface ScenarioSectionRenderOptions {
   readonly flowEnabled: boolean;
@@ -38,6 +39,10 @@ export function renderScenarioSection(
     lines.push('');
     lines.push(`> \`${scenario.id}\``);
     lines.push('');
+
+    if (scenario.accepts.length > 0) {
+      lines.push(renderAccepts(scenario.accepts, messages));
+    }
 
     lines.push(`| ${s.columnStep} | ${s.columnOperation} | ${s.columnInput} |`);
     lines.push('|---|------|------|');

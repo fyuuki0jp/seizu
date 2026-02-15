@@ -7,6 +7,7 @@ import type { ReporterError, ReporterInput } from './types';
 
 export const reportSummary = define<string, ReporterInput, ReporterError>({
   id: 'report.summary',
+  accepts: ['PBT検証結果のサマリーレポートを生成できる'],
   pre: [
     /** Verification results must not be empty */
     (_, input) =>
@@ -29,6 +30,7 @@ export const reportSummary = define<string, ReporterInput, ReporterError>({
 
 export const reportReplay = define<string, ReporterInput, ReporterError>({
   id: 'report.replay',
+  accepts: ['失敗したPBT検証のリプレイコマンドを生成できる'],
   pre: [
     /** Must have at least one failure to generate replay */
     (_, input) =>

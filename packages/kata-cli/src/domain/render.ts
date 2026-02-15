@@ -3,12 +3,14 @@ import { renderCoverageSummary } from '../doc/renderer/coverage-section';
 import { renderFlowSection } from '../doc/renderer/flow-section';
 import { renderScenarioSection } from '../doc/renderer/scenario-section';
 import {
-  renderContractHeader,
+  renderAccepts,
+  renderContractHeading,
   renderErrorCatalog,
   renderInvariants,
   renderPostconditions,
   renderPreconditions,
   renderTestExamples,
+  renderTypeTable,
 } from '../doc/renderer/sections';
 import type {
   ContractDetailInput,
@@ -24,6 +26,7 @@ import type {
 
 export const renderTitle = define<readonly string[], TitleInput, RenderError>({
   id: 'render.title',
+  accepts: ['ドキュメントのタイトルと説明をレンダリングできる'],
   pre: [
     /** Document title must not be empty. */
     (_, input) =>
@@ -46,6 +49,7 @@ export const renderTitle = define<readonly string[], TitleInput, RenderError>({
 
 export const renderToc = define<readonly string[], TocInput, RenderError>({
   id: 'render.toc',
+  accepts: ['2つ以上のContractがある場合に目次を生成できる'],
   pre: [
     /** TOC is meaningful only when two or more contracts are present. */
     (_, input) =>
@@ -90,6 +94,7 @@ export const renderScenarios = define<
   RenderError
 >({
   id: 'render.scenarioSection',
+  accepts: ['シナリオセクションをレンダリングできる'],
   pre: [
     /** Scenario section requires at least one parsed scenario. */
     (_, input) =>
@@ -123,7 +128,11 @@ export function renderContractSections(
 
   for (const linked of sorted) {
     current.push('---', '');
-    current.push(...renderContractHeader(linked, messages).split('\n'));
+    current.push(...renderContractHeading(linked).split('\n'));
+    current.push(
+      ...renderAccepts(linked.contract.accepts, messages).split('\n')
+    );
+    current.push(...renderTypeTable(linked, messages).split('\n'));
     if (flowEnabled && linked.contract.flow) {
       current.push(
         ...renderFlowSection(linked.contract.flow, messages).split('\n')
@@ -168,6 +177,7 @@ export const renderMarkdownScenario = scenario<
   MarkdownInput
 >({
   id: 'render.markdown',
+  accepts: ['タイトル・シナリオ・目次をMarkdownとして組み立てられる'],
   description: 'Markdown ドキュメントの前半組み立て',
   flow: (input) => {
     const steps = [];

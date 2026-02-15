@@ -19,6 +19,7 @@ function makeLinkedScenario(scenario: ParsedScenario): LinkedScenario {
 describe('renderScenarioSection', () => {
   const scenario = makeLinkedScenario({
     id: 'cart.normalPurchase',
+    accepts: [],
     description: '通常の購入フロー',
     variableName: 'normalPurchase',
     steps: [
@@ -71,6 +72,7 @@ describe('renderScenarioSection', () => {
   test('renders empty input as dash', () => {
     const emptyInputScenario = makeLinkedScenario({
       id: 'test.emptyInput',
+      accepts: [],
       description: undefined,
       variableName: undefined,
       steps: [{ index: 0, contractId: 'test.op', inputLiteral: '{}' }],
@@ -85,6 +87,7 @@ describe('renderScenarioSection', () => {
   test('strips type assertion from input', () => {
     const assertionScenario = makeLinkedScenario({
       id: 'test.assertion',
+      accepts: [],
       description: undefined,
       variableName: undefined,
       steps: [
@@ -113,6 +116,7 @@ describe('renderScenarioSection', () => {
   test('renders scenario without description using id as heading', () => {
     const noDescScenario = makeLinkedScenario({
       id: 'test.noDescription',
+      accepts: [],
       description: undefined,
       variableName: undefined,
       steps: [],

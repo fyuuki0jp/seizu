@@ -330,6 +330,33 @@ const s = scenario({
     expect(scenarios[0].description).toBe('TSDoc description');
   });
 
+  test('parses accepts field in scenario', () => {
+    const source = createSourceFile(`
+const s = scenario({
+  id: 'test.accepts',
+  accepts: ['Users can purchase items'],
+  flow: () => [],
+});
+`);
+
+    const scenarios = parseScenarios(source);
+    expect(scenarios).toHaveLength(1);
+    expect(scenarios[0].accepts).toEqual(['Users can purchase items']);
+  });
+
+  test('defaults accepts to empty array when not present', () => {
+    const source = createSourceFile(`
+const s = scenario({
+  id: 'test.noacc',
+  flow: () => [],
+});
+`);
+
+    const scenarios = parseScenarios(source);
+    expect(scenarios).toHaveLength(1);
+    expect(scenarios[0].accepts).toEqual([]);
+  });
+
   test('uses description property when no variable name', () => {
     const source = createSourceFile(`
 export default scenario({
