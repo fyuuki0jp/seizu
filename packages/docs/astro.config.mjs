@@ -7,7 +7,7 @@ export default defineConfig({
   base: '/rise',
   integrations: [
     starlight({
-      title: 'kata',
+      title: 'seizu',
       locales: {
         en: { label: 'English', lang: 'en' },
         ja: { label: '日本語', lang: 'ja' },
@@ -20,8 +20,8 @@ export default defineConfig({
           slug: 'index',
         },
         {
-          label: 'kata-cli Contracts',
-          translations: { ja: 'kata-cli Contract仕様' },
+          label: 'seizu-cli Contracts',
+          translations: { ja: 'seizu-cli Contract仕様' },
           slug: 'contracts',
         },
       ],

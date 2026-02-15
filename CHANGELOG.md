@@ -6,6 +6,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [2.0.0] - 2026-02-15
+
+### Breaking Changes
+
+- **Package rename**: `kata` → `seizu`, `kata-cli` → `seizu-cli`
+- **CLI binary**: `kata` → `seizu` (e.g. `npx seizu doc`)
+- **Config file**: `kata.config.ts` → `seizu.config.ts`
+- **Public types**: `KataConfig` → `SeizuConfig`, `KataDocConfig` → `SeizuDocConfig`, `KataVerifyConfig` → `SeizuVerifyConfig`
+- **Source detection**: `import { define } from 'kata'` → `import { define } from 'seizu'`
+
+### Added
+
+- `seizu init` scaffolding command with Claude Code skill integration
+- `strict` contract mode with runtime post-condition and invariant checking
+- `publishConfig` for npm public access
+- README for seizu, seizu-cli, and project root
+- ESM + CJS dual format publishing with TypeScript declarations
+
+### Migration Guide
+
+1. Replace dependencies: `kata` → `seizu`, `kata-cli` → `seizu-cli`
+2. Rename config: `kata.config.ts` → `seizu.config.ts`
+3. Update imports: `from 'kata'` → `from 'seizu'`
+4. Update CLI usage: `npx kata` → `npx seizu`
+5. Update types: `KataConfig` → `SeizuConfig` (and other `Kata*` → `Seizu*` types)
+
 ## [0.6.0] - 2026-01-22
 
 ### Changed

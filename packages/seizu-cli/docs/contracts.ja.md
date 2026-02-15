@@ -1,8 +1,3 @@
----
-title: seizu-cli Contract仕様書
-description: 自動生成されたContract仕様ドキュメント
----
-
 # seizu-cli Contract Specification
 
 > seizu-cli domain logic contracts — self-documenting dogfooding example

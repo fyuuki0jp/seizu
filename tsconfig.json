@@ -10,6 +10,5 @@
     "skipLibCheck": true,
     "isolatedModules": true
   },
-  "include": [],
   "exclude": ["node_modules", "dist"]
 }

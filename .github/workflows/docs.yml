@@ -33,18 +33,23 @@ jobs:
 
       - run: pnpm build
 
-      - name: Generate kata-cli self-documentation
-        run: pnpm --filter kata-cli doc:self
+      - name: Generate seizu-cli self-documentation
+        run: |
+          pnpm --filter seizu-cli doc:self
+          pnpm --filter seizu-cli doc:self:ja
 
       - name: Copy contract docs into Starlight
         run: |
-          mkdir -p packages/docs/src/content/docs
-          printf -- '---\ntitle: kata-cli Contract Specification\ndescription: Auto-generated contract documentation\n---\n\n' \
-            | cat - packages/kata-cli/docs/contracts.md \
-            > packages/docs/src/content/docs/contracts.md
+          mkdir -p packages/docs/src/content/docs/en packages/docs/src/content/docs/ja
+          printf -- '---\ntitle: seizu-cli Contract Specification\ndescription: Auto-generated contract documentation\n---\n\n' \
+            | cat - packages/seizu-cli/docs/contracts.md \
+            > packages/docs/src/content/docs/en/contracts.md
+          printf -- '---\ntitle: seizu-cli Contract仕様書\ndescription: 自動生成されたContract仕様ドキュメント\n---\n\n' \
+            | cat - packages/seizu-cli/docs/contracts.ja.md \
+            > packages/docs/src/content/docs/ja/contracts.md
 
       - name: Build Starlight site
-        run: pnpm --filter kata-docs build:site
+        run: pnpm --filter seizu-docs build:site
 
       - uses: actions/upload-pages-artifact@v3
         with:

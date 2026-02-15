@@ -1,0 +1,45 @@
+{
+  "name": "seizu-cli",
+  "version": "2.0.0",
+  "description": "Unified CLI and tools for seizu contracts",
+  "author": "seizu Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fyuuki0jp/rise.git",
+    "directory": "packages/seizu-cli"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "bin": {
+    "seizu": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/doc/index.d.ts",
+        "default": "./dist/doc/index.js"
+      }
+    }
+  },
+  "main": "./dist/doc/index.js",
+  "module": "./dist/doc/index.js",
+  "types": "./dist/doc/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "doc:self": "node --import tsx/esm src/cli.ts doc --config seizu.config.ts",
+    "doc:self:ja": "node --import tsx/esm src/cli.ts doc --config seizu.config.ts --locale ja --output docs/contracts.ja.md",
+    "doc:self:check": "node --import tsx/esm src/cli.ts doc --config seizu.config.ts --check"
+  },
+  "dependencies": {
+    "seizu": "workspace:*",
+    "typescript": "^5.9.3",
+    "cac": "^6.0.0"
+  }
+}
