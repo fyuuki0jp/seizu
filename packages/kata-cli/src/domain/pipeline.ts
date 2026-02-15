@@ -27,12 +27,12 @@ import type {
 
 // === doc.parse ===
 
+/**
+ * @accepts ソースファイルからContract・Scenario・テストをパースできる
+ * @accepts ソースファイルが未指定の場合はエラーを返す
+ */
 export const docParse = define<DocPipelineState, ParseInput, PipelineError>({
   id: 'doc.parse',
-  accepts: [
-    'ソースファイルからContract・Scenario・テストをパースできる',
-    'ソースファイルが未指定の場合はエラーを返す',
-  ],
   pre: [
     /** Source files must not be empty */
     (_, input) =>
@@ -79,9 +79,9 @@ export const docParse = define<DocPipelineState, ParseInput, PipelineError>({
 
 // === doc.filter ===
 
+/** @accepts 指定されたIDでContractをフィルタリングできる */
 export const docFilter = define<DocPipelineState, FilterInput, never>({
   id: 'doc.filter',
-  accepts: ['指定されたIDでContractをフィルタリングできる'],
   pre: [],
   transition: (state, input) => {
     if (input.filterIds && input.filterIds.size > 0) {
@@ -103,9 +103,9 @@ export const docFilter = define<DocPipelineState, FilterInput, never>({
 
 // === doc.link ===
 
+/** @accepts Contractとテストスイートを紐付けできる */
 export const docLink = define<DocPipelineState, Record<string, never>, never>({
   id: 'doc.link',
-  accepts: ['Contractとテストスイートを紐付けできる'],
   pre: [],
   transition: (state) => {
     const linked = linkContractsToTests(state.filtered, state.testSuites);
@@ -120,9 +120,9 @@ export const docLink = define<DocPipelineState, Record<string, never>, never>({
 
 // === doc.analyze ===
 
+/** @accepts テストカバレッジを分析してレポートを生成できる */
 export const docAnalyze = define<DocPipelineState, AnalyzeInput, never>({
   id: 'doc.analyze',
-  accepts: ['テストカバレッジを分析してレポートを生成できる'],
   pre: [],
   transition: (state, input) => {
     if (!input.enabled) {
@@ -140,10 +140,10 @@ export const docAnalyze = define<DocPipelineState, AnalyzeInput, never>({
 
 // === doc.render ===
 
+/** @accepts パイプライン状態からMarkdownドキュメントを生成できる */
 export const docRender = define<DocPipelineState, Record<string, never>, never>(
   {
     id: 'doc.render',
-    accepts: ['パイプライン状態からMarkdownドキュメントを生成できる'],
     pre: [],
     transition: (state) => {
       const result = renderMarkdownScenario([], {
@@ -188,9 +188,9 @@ export const docRender = define<DocPipelineState, Record<string, never>, never>(
 
 // === doc.generate scenario ===
 
+/** @accepts ソースファイルからContract仕様書を自動生成できる */
 export const docGenerate = scenario<DocPipelineState, GenerateInput>({
   id: 'doc.generate',
-  accepts: ['ソースファイルからContract仕様書を自動生成できる'],
   description: 'ドキュメント生成パイプライン',
   flow: (input) => [
     step(docParse, { sourceFiles: input.sourceFiles }),
@@ -205,12 +205,12 @@ export const docGenerate = scenario<DocPipelineState, GenerateInput>({
 
 // === coverage.generate scenario ===
 
+/** @accepts テストカバレッジレポートを生成できる */
 export const coverageGenerate = scenario<
   DocPipelineState,
   CoverageGenerateInput
 >({
   id: 'coverage.generate',
-  accepts: ['テストカバレッジレポートを生成できる'],
   description: 'カバレッジ分析パイプライン',
   flow: (input) => [
     step(docParse, { sourceFiles: input.sourceFiles }),

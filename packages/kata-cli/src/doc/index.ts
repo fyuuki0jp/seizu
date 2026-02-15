@@ -6,6 +6,7 @@ import { getMessages } from './i18n/index';
 import { createProgramFromFiles, resolveGlobs } from './parser/source-resolver';
 import { renderMarkdown } from './renderer/markdown';
 import type { KataDocConfig } from './types';
+import { validateContracts } from './validator';
 
 export { ConfigError, loadConfig } from '../config';
 export { analyzeCoverage } from './analyzer/coverage-analyzer';
@@ -32,6 +33,8 @@ export type {
   KataVerifyConfig,
   LinkedScenario,
 } from './types';
+export type { Diagnostic } from './validator';
+export { validateContracts } from './validator';
 
 export interface GenerateOptions {
   readonly filterIds?: readonly string[];
@@ -131,6 +134,11 @@ export function generate(
     throw new Error(
       `Pipeline failed at step ${result.error.stepIndex}: ${result.error.contractId}`
     );
+  }
+
+  const diagnostics = validateContracts(result.value.contracts);
+  for (const d of diagnostics) {
+    console.error(`[${d.level}] ${d.contractId}: ${d.message}`);
   }
 
   return result.value.markdown;

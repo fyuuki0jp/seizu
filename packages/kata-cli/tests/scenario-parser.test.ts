@@ -330,11 +330,11 @@ const s = scenario({
     expect(scenarios[0].description).toBe('TSDoc description');
   });
 
-  test('parses accepts field in scenario', () => {
+  test('parses @accepts tags from TSDoc in scenario', () => {
     const source = createSourceFile(`
+/** @accepts Users can purchase items */
 const s = scenario({
   id: 'test.accepts',
-  accepts: ['Users can purchase items'],
   flow: () => [],
 });
 `);

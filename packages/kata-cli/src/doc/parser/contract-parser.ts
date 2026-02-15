@@ -8,13 +8,16 @@ import type {
   ParsedTypeInfo,
 } from '../types';
 import {
-  extractStringArrayProperty,
   extractStringProperty,
   findArrayProperty,
   findEnclosingVariableName,
 } from './ast-utils';
 import { extractErrorTags } from './error-tag-extractor';
-import { extractLeadingTSDoc, extractVariableTSDoc } from './tsdoc-extractor';
+import {
+  extractAcceptsTags,
+  extractLeadingTSDoc,
+  extractVariableTSDoc,
+} from './tsdoc-extractor';
 
 /**
  * Parse all `define()` calls in a source file and extract contract metadata.
@@ -56,13 +59,13 @@ function parseDefineCall(
   const id = extractStringProperty(arg, 'id');
   if (!id) return undefined;
 
-  const accepts = extractStringArrayProperty(arg, 'accepts');
   const typeInfo = extractTypeInfo(call, sourceFile);
   const guards = extractGuards(arg, sourceFile);
   const conditions = extractConditions(arg, sourceFile);
   const invariants = extractInvariants(arg, sourceFile);
   const flow = extractContractFlow(arg, sourceFile, id);
   const variableName = findEnclosingVariableName(call);
+  const accepts = extractAcceptsTags(call, sourceFile);
   const tsdocDescription = variableName
     ? extractVariableTSDoc(variableName, sourceFile)
     : undefined;

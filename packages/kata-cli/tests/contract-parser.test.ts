@@ -271,11 +271,13 @@ const x = define<S, I, E>({
     expect(contracts[0].description).toBe('Inline description');
   });
 
-  test('parses accepts field', () => {
+  test('parses @accepts tags from TSDoc', () => {
     const source = createSourceFile(`
+/** @accepts Requirement A
+ * @accepts Requirement B
+ */
 const x = define<S, I, E>({
   id: 'test.accepts',
-  accepts: ['Requirement A', 'Requirement B'],
   pre: [],
   transition: (s) => s,
 });
@@ -286,11 +288,15 @@ const x = define<S, I, E>({
     expect(contracts[0].accepts).toEqual(['Requirement A', 'Requirement B']);
   });
 
-  test('parses accepts with as const', () => {
+  test('parses @accepts with description', () => {
     const source = createSourceFile(`
+/**
+ * Some description
+ *
+ * @accepts Immutable req
+ */
 const x = define<S, I, E>({
   id: 'test.asconst',
-  accepts: ['Immutable req'] as const,
   pre: [],
   transition: (s) => s,
 });
@@ -299,6 +305,7 @@ const x = define<S, I, E>({
     const contracts = parseContracts(source);
     expect(contracts).toHaveLength(1);
     expect(contracts[0].accepts).toEqual(['Immutable req']);
+    expect(contracts[0].description).toBe('Some description');
   });
 
   test('defaults accepts to empty array when not present', () => {

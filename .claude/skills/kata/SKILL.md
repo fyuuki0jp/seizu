@@ -86,7 +86,15 @@ type ItemNotFound = { readonly tag: 'ItemNotFound'; readonly itemId: string };
 `define<TState, TInput, TError>(def)` で集約に対するコマンドを宣言する。
 返り値は **呼び出し可能な関数 + メタデータ** になる。
 
+TSDoc の `@accepts` タグでビジネス上の受け入れ条件を宣言する。kata-cli がこのタグを抽出して仕様書に反映する。
+
 ```typescript
+/**
+ * カートを作成する
+ *
+ * @accepts ユーザーは新しいカートを作成できる
+ * @accepts 既にカートが存在する場合はエラーが返される
+ */
 const createCart = define<CartState, { userId: string }, AlreadyExists>({
   id: 'cart.create',
   pre: [
@@ -311,9 +319,10 @@ kata を使ったドメインロジックを書くとき、以下に従うこと
 2. **Error は tagged union** — `{ readonly tag: 'ErrorName' }` 形式。文脈情報も含める
 3. **1コントラクト = 1コマンド** — `define()` は単一のドメイン操作に対応させる
 4. **id は `集約名.コマンド名` 形式** — `cart.create`, `order.submit` など
-5. **ガードは `pass` / `err()` を返す** — boolean ではなく Result で表現
-6. **タグリテラルには `as const`** — 型推論を正確にするため
-7. **transition は純粋関数** — 副作用なし。スプレッド構文でイミュータブル更新
-8. **post / invariant はドメイン仕様の宣言** — ランタイム検証ではなく PBT 用
-9. **ユースケースは scenario() で組み立てる** — flow 関数で入力に応じた動的ステップ生成
-10. **テストでは `expectOk` / `expectErr` を使う** — Result のアサーション
+5. **TSDoc `@accepts` で受け入れ条件を宣言** — ビジネス要求を自然文で記述。kata-cli が仕様書に反映する
+6. **ガードは `pass` / `err()` を返す** — boolean ではなく Result で表現
+7. **タグリテラルには `as const`** — 型推論を正確にするため
+8. **transition は純粋関数** — 副作用なし。スプレッド構文でイミュータブル更新
+9. **post / invariant はドメイン仕様の宣言** — ランタイム検証ではなく PBT 用
+10. **ユースケースは scenario() で組み立てる** — flow 関数で入力に応じた動的ステップ生成
+11. **テストでは `expectOk` / `expectErr` を使う** — Result のアサーション

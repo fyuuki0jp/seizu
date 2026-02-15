@@ -76,6 +76,96 @@ function extractStatementTSDoc(
 }
 
 /**
+ * Extract all @accepts tags from the TSDoc comment of the statement
+ * enclosing a call expression. Uses name-based lookup first, then
+ * falls back to position-based containment check (works when parent
+ * pointers are not set, e.g. ts.createProgram).
+ */
+export function extractAcceptsTags(
+  call: ts.CallExpression,
+  sourceFile: ts.SourceFile
+): readonly string[] {
+  const statement = findEnclosingStatement(call, sourceFile);
+  if (statement) {
+    return extractAcceptsFromStatement(statement, sourceFile);
+  }
+  return [];
+}
+
+function findEnclosingStatement(
+  call: ts.CallExpression,
+  sourceFile: ts.SourceFile
+): ts.Node | undefined {
+  const callStart = call.getStart(sourceFile);
+  const callEnd = call.getEnd();
+
+  for (const stmt of sourceFile.statements) {
+    if (stmt.getStart(sourceFile) <= callStart && stmt.getEnd() >= callEnd) {
+      return stmt;
+    }
+  }
+  return undefined;
+}
+
+function extractAcceptsFromStatement(
+  statement: ts.Node,
+  sourceFile: ts.SourceFile
+): readonly string[] {
+  // Try JSDoc API first
+  const jsDocs = (statement as { jsDoc?: ts.JSDoc[] }).jsDoc;
+  if (jsDocs && jsDocs.length > 0) {
+    const tags: string[] = [];
+    for (const doc of jsDocs) {
+      if (doc.tags) {
+        for (const tag of doc.tags) {
+          if (tag.tagName.text === 'accepts') {
+            const comment =
+              typeof tag.comment === 'string'
+                ? tag.comment
+                : (tag.comment
+                    ?.map((part) => part.getText(sourceFile))
+                    .join('') ?? '');
+            if (comment.trim()) tags.push(comment.trim());
+          }
+        }
+      }
+    }
+    if (tags.length > 0) return tags;
+  }
+
+  // Fallback: manual leading comment extraction
+  const fullText = sourceFile.getFullText();
+  const leadingComments = ts.getLeadingCommentRanges(
+    fullText,
+    statement.getFullStart()
+  );
+  if (!leadingComments) return [];
+
+  for (const comment of leadingComments) {
+    if (comment.kind === ts.SyntaxKind.MultiLineCommentTrivia) {
+      const commentText = fullText.slice(comment.pos, comment.end);
+      if (commentText.startsWith('/**')) {
+        return parseAcceptsFromRaw(commentText);
+      }
+    }
+  }
+
+  return [];
+}
+
+function parseAcceptsFromRaw(raw: string): readonly string[] {
+  const tags: string[] = [];
+  const lines = raw.split('\n');
+  for (const line of lines) {
+    const match = line.match(/@accepts\s+(.+)/);
+    if (match) {
+      tags.push(match[1].replace(/\s*\*\/$/, '').trim());
+    }
+  }
+  return tags;
+}
+
+/**
  * Parse a raw JSDoc comment string, stripping markers and whitespace.
  */
 function parseJSDocComment(raw: string): string {

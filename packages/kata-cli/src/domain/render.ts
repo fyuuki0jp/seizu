@@ -24,9 +24,9 @@ import type {
 
 // === render.title ===
 
+/** @accepts ドキュメントのタイトルと説明をレンダリングできる */
 export const renderTitle = define<readonly string[], TitleInput, RenderError>({
   id: 'render.title',
-  accepts: ['ドキュメントのタイトルと説明をレンダリングできる'],
   pre: [
     /** Document title must not be empty. */
     (_, input) =>
@@ -47,9 +47,9 @@ export const renderTitle = define<readonly string[], TitleInput, RenderError>({
 
 // === render.toc ===
 
+/** @accepts 2つ以上のContractがある場合に目次を生成できる */
 export const renderToc = define<readonly string[], TocInput, RenderError>({
   id: 'render.toc',
-  accepts: ['2つ以上のContractがある場合に目次を生成できる'],
   pre: [
     /** TOC is meaningful only when two or more contracts are present. */
     (_, input) =>
@@ -88,13 +88,13 @@ export const renderToc = define<readonly string[], TocInput, RenderError>({
 
 // === render.scenarioSection ===
 
+/** @accepts シナリオセクションをレンダリングできる */
 export const renderScenarios = define<
   readonly string[],
   ScenarioSectionInput,
   RenderError
 >({
   id: 'render.scenarioSection',
-  accepts: ['シナリオセクションをレンダリングできる'],
   pre: [
     /** Scenario section requires at least one parsed scenario. */
     (_, input) =>
@@ -172,12 +172,12 @@ export function renderCoverageSection(
 
 // === render.markdown scenario ===
 
+/** @accepts タイトル・シナリオ・目次をMarkdownとして組み立てられる */
 export const renderMarkdownScenario = scenario<
   readonly string[],
   MarkdownInput
 >({
   id: 'render.markdown',
-  accepts: ['タイトル・シナリオ・目次をMarkdownとして組み立てられる'],
   description: 'Markdown ドキュメントの前半組み立て',
   flow: (input) => {
     const steps = [];

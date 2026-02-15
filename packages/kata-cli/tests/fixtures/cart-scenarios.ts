@@ -42,10 +42,13 @@ const addItem = define<
   }),
 });
 
-/** 通常の購入フロー */
+/**
+ * 通常の購入フロー
+ *
+ * @accepts ユーザーは複数のアイテムをカートに入れて購入できる
+ */
 export const normalPurchase = scenario({
   id: 'cart.normalPurchase',
-  accepts: ['ユーザーは複数のアイテムをカートに入れて購入できる'],
   description: '通常の購入フロー',
   flow: (input: { userId: string }) => [
     step(createCart, { userId: input.userId }),

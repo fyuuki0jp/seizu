@@ -61,38 +61,6 @@ export function findArrayProperty(
 }
 
 /**
- * Extract a string array property from an object literal expression.
- * Supports `as const` assertions and template literals.
- */
-export function extractStringArrayProperty(
-  obj: ts.ObjectLiteralExpression,
-  name: string
-): readonly string[] {
-  for (const prop of obj.properties) {
-    if (
-      !ts.isPropertyAssignment(prop) ||
-      !ts.isIdentifier(prop.name) ||
-      prop.name.text !== name
-    ) {
-      continue;
-    }
-
-    const init = ts.isAsExpression(prop.initializer)
-      ? prop.initializer.expression
-      : prop.initializer;
-
-    if (!ts.isArrayLiteralExpression(init)) continue;
-
-    return init.elements.flatMap((el) =>
-      ts.isStringLiteral(el) || ts.isNoSubstitutionTemplateLiteral(el)
-        ? [el.text]
-        : []
-    );
-  }
-  return [];
-}
-
-/**
  * Walk up the AST to find the enclosing variable declaration name.
  */
 export function findEnclosingVariableName(node: ts.Node): string | undefined {

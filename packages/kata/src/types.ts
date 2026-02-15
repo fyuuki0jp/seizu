@@ -15,7 +15,6 @@ export type Invariant<TState> = (state: TState) => boolean;
 
 export interface ContractDef<TState, TInput, TError> {
   readonly id: string;
-  readonly accepts?: readonly string[];
   readonly pre: ReadonlyArray<Guard<TState, TInput, TError>>;
   readonly transition: (state: TState, input: TInput) => TState;
   readonly post?: ReadonlyArray<Condition<TState, TInput>>;

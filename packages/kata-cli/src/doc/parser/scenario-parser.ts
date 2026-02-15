@@ -2,12 +2,11 @@ import ts from 'typescript';
 import { extractScenarioFlow } from '../flow';
 import type { ParsedScenario, ParsedScenarioStep } from '../types';
 import {
-  extractStringArrayProperty,
   extractStringProperty,
   findArrowFunctionProperty,
   findEnclosingVariableName,
 } from './ast-utils';
-import { extractVariableTSDoc } from './tsdoc-extractor';
+import { extractAcceptsTags, extractVariableTSDoc } from './tsdoc-extractor';
 
 /**
  * Parse all `scenario()` calls in a source file and extract scenario metadata.
@@ -51,10 +50,10 @@ function parseScenarioCall(
   const id = extractStringProperty(arg, 'id');
   if (!id) return undefined;
 
-  const accepts = extractStringArrayProperty(arg, 'accepts');
   const steps = extractStepsFromFlow(arg, sourceFile, contractVarMap);
   const flow = extractScenarioFlow(arg, sourceFile, id, contractVarMap);
   const variableName = findEnclosingVariableName(call);
+  const accepts = extractAcceptsTags(call, sourceFile);
   const tsdocDescription = variableName
     ? extractVariableTSDoc(variableName, sourceFile)
     : undefined;
