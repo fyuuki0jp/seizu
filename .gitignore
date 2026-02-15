@@ -25,6 +25,14 @@ npm-debug.log*
 pnpm-debug.log*
 
 # Test coverage
-coverage/
+/coverage/
+
+# Turbo
+.turbo
+
+# Astro
+.astro/
 
 # Misc
+contracts.flow.json
+tmp.md
