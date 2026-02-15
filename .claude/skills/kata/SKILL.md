@@ -19,10 +19,10 @@ kata はドメイン駆動設計（DDD）のビジネスロジックを **コン
 | 集約の状態 | `TState`（readonly plain object） |
 | ドメインエラー | `TError`（tagged union） |
 | コマンドハンドラ | `define()` で定義するコントラクト |
-| ビジネスルール / ガード条件 | `pre`（事前条件の配列） |
+| ビジネスルール / ガード条件 | `pre` に `guard('label', fn)` で宣言 |
 | 状態遷移 / 集約の振る舞い | `transition` 関数 |
-| ドメイン不変条件 | `invariant`（PBT で検証） |
-| 事後条件の仕様 | `post`（PBT で検証） |
+| ドメイン不変条件 | `invariant` に `ensure('label', fn)` で宣言（PBT で検証） |
+| 事後条件の仕様 | `post` に `check('label', fn)` で宣言（PBT で検証） |
 | ユースケース / ワークフロー | `scenario()` で組み立てるステップ列 |
 
 ## 基本原則
@@ -36,7 +36,7 @@ kata はドメイン駆動設計（DDD）のビジネスロジックを **コン
 
 ```typescript
 // コア API
-import { define, ok, err, pass, isOk, isErr, map, flatMap, match } from 'kata';
+import { define, guard, check, ensure, ok, err, pass, isOk, isErr, map, flatMap, match } from 'kata';
 import type { Result, Contract, Guard, Condition, Invariant } from 'kata';
 
 // ユースケース（シナリオ）API
@@ -83,7 +83,7 @@ type ItemNotFound = { readonly tag: 'ItemNotFound'; readonly itemId: string };
 
 ### Step 3: コマンドハンドラをコントラクトとして宣言する
 
-`define<TState, TInput, TError>(def)` で集約に対するコマンドを宣言する。
+`define<TState, TInput, TError>(name, body)` で集約に対するコマンドを宣言する。
 返り値は **呼び出し可能な関数 + メタデータ** になる。
 
 TSDoc の `@accepts` タグでビジネス上の受け入れ条件を宣言する。kata-cli がこのタグを抽出して仕様書に反映する。
@@ -95,42 +95,51 @@ TSDoc の `@accepts` タグでビジネス上の受け入れ条件を宣言す�
  * @accepts ユーザーは新しいカートを作成できる
  * @accepts 既にカートが存在する場合はエラーが返される
  */
-const createCart = define<CartState, { userId: string }, AlreadyExists>({
-  id: 'cart.create',
-  pre: [
-    (s) => (!s.exists ? pass : err({ tag: 'AlreadyExists' as const })),
-  ],
-  transition: (state, input) => ({
-    ...state,
-    exists: true,
-    userId: input.userId,
-  }),
-});
+const createCart = define<CartState, { userId: string }, AlreadyExists>(
+  'cart.create',
+  {
+    pre: [
+      guard('カートがまだ存在していないこと', (s) =>
+        !s.exists ? pass : err({ tag: 'AlreadyExists' as const })
+      ),
+    ],
+    transition: (state, input) => ({
+      ...state,
+      exists: true,
+      userId: input.userId,
+    }),
+  }
+);
 ```
 
 #### define() の構造
 
 | フィールド | 必須 | 説明 |
 |-----------|------|------|
-| `id` | Yes | コントラクトの識別子。`集約名.コマンド名` 形式 |
-| `pre` | Yes | ビジネスルール（ガード）の配列。`pass` で成功、`err()` で違反。先頭から評価し fail-fast |
+| `name`（第1引数） | Yes | コントラクトの名前。`集約名.コマンド名` 形式 |
+| `pre` | Yes | `guard('label', fn)` の配列。`pass` で成功、`err()` で違反。先頭から評価し fail-fast |
 | `transition` | Yes | 状態遷移の純粋関数 `(state, input) => newState` |
-| `post` | No | 事後条件 `(before, after, input) => boolean`。PBT でのみ検証される |
-| `invariant` | No | 集約の不変条件 `(state) => boolean`。PBT でのみ検証される |
+| `post` | No | `check('label', fn)` の配列。`(before, after, input) => boolean`。PBT でのみ検証される |
+| `invariant` | No | `ensure('label', fn)` の配列。`(state) => boolean`。PBT でのみ検証される |
 
 #### ビジネスルール（ガード）の書き方
 
 ```typescript
 pre: [
   // 集約の存在チェック
-  (s) => (s.exists ? pass : err({ tag: 'CartNotFound' as const })),
+  guard('カートが存在すること', (s) =>
+    s.exists ? pass : err({ tag: 'CartNotFound' as const })
+  ),
   // 重複チェック（state + input の両方を参照）
-  (s, i) => (!s.items.has(i.itemId)
-    ? pass
-    : err({ tag: 'DuplicateItem' as const, itemId: i.itemId })),
+  guard('アイテムが重複していないこと', (s, i) =>
+    !s.items.has(i.itemId)
+      ? pass
+      : err({ tag: 'DuplicateItem' as const, itemId: i.itemId })
+  ),
 ]
 ```
 
+- `guard('label', fn)` でラベル付きガードを定義。ラベルは PBT レポートと仕様書に表示される
 - `pass` は `ok(undefined)` のエイリアス。ルール適合を示す
 - `err({ tag: '...' })` でビジネスルール違反を返す
 - タグリテラルには `as const` を付けて型を狭める
@@ -139,25 +148,31 @@ pre: [
 #### ドメイン不変条件と事後条件の宣言
 
 ```typescript
-const addItem = define<CartState, AddItemInput, AddItemError>({
-  id: 'cart.addItem',
-  pre: [/* ビジネスルール */],
-  transition: (state, input) => ({
-    ...state,
-    items: new Map([
-      ...state.items,
-      [input.itemId, { qty: input.qty, price: input.price }],
-    ]),
-  }),
-  // 事後条件: 遷移前後の状態を比較する仕様
-  post: [
-    (before, after) => after.items.size === before.items.size + 1,
-  ],
-  // 不変条件: 集約が常に満たすべきルール
-  invariant: [
-    (s) => [...s.items.values()].every((i) => i.qty > 0),
-  ],
-});
+const addItem = define<CartState, AddItemInput, AddItemError>(
+  'cart.addItem',
+  {
+    pre: [/* guard('label', fn) */],
+    transition: (state, input) => ({
+      ...state,
+      items: new Map([
+        ...state.items,
+        [input.itemId, { qty: input.qty, price: input.price }],
+      ]),
+    }),
+    // 事後条件: 遷移前後の状態を比較する仕様
+    post: [
+      check('item count increases', (before, after) =>
+        after.items.size === before.items.size + 1
+      ),
+    ],
+    // 不変条件: 集約が常に満たすべきルール
+    invariant: [
+      ensure('qty positive', (s) =>
+        [...s.items.values()].every((i) => i.qty > 0)
+      ),
+    ],
+  }
+);
 ```
 
 **重要**: `post` と `invariant` はランタイムでは評価されない。`verify()` による PBT でのみ検証される仕様宣言。
@@ -186,8 +201,8 @@ const message = match(result, {
 コントラクトはメタデータにもアクセスできる:
 
 ```typescript
-createCart.id;         // 'cart.create'
-createCart.pre;        // ガード関数の配列
+createCart.name;       // 'cart.create'
+createCart.pre;        // Guard オブジェクトの配列
 createCart.transition; // 遷移関数
 ```
 
@@ -204,14 +219,15 @@ type PurchaseInput = {
   price: number;
 };
 
-const purchase = scenario<CartState, PurchaseInput>({
-  id: 'cart.purchase',
-  description: '購入フロー',
-  flow: (input) => [
-    step(createCart, { userId: input.userId }),
-    step(addItem, { itemId: input.itemId, qty: input.qty, price: input.price }),
-  ],
-});
+const purchase = scenario<CartState, PurchaseInput>(
+  'cart.purchase',
+  {
+    flow: (input) => [
+      step(createCart, { userId: input.userId }),
+      step(addItem, { itemId: input.itemId, qty: input.qty, price: input.price }),
+    ],
+  }
+);
 
 // ユースケースの実行
 const result = purchase(emptyCart, {
@@ -227,7 +243,7 @@ const result = purchase(emptyCart, {
 - 各ステップの出力 state が次のステップの入力 state になる（state threading）
 - ビジネスルール違反が発生したステップで即座に停止（short-circuit）
 - 成功時: 最終的な集約状態が `ok` で返る
-- 失敗時: `{ stepIndex, contractId, error }` でどのステップのどのルールが違反したか特定できる
+- 失敗時: `{ stepIndex, contractName, error }` でどのステップのどのルールが違反したか特定できる
 
 #### 入力に応じた動的ステップ生成
 
@@ -239,16 +255,17 @@ type BulkInput = {
   items: { id: string; qty: number; price: number }[];
 };
 
-const bulkPurchase = scenario<CartState, BulkInput>({
-  id: 'cart.bulkPurchase',
-  description: '一括購入フロー',
-  flow: (input) => [
-    step(createCart, { userId: input.userId }),
-    ...input.items.map((item) =>
-      step(addItem, { itemId: item.id, qty: item.qty, price: item.price })
-    ),
-  ],
-});
+const bulkPurchase = scenario<CartState, BulkInput>(
+  'cart.bulkPurchase',
+  {
+    flow: (input) => [
+      step(createCart, { userId: input.userId }),
+      ...input.items.map((item) =>
+        step(addItem, { itemId: item.id, qty: item.qty, price: item.price })
+      ),
+    ],
+  }
+);
 ```
 
 ### Step 6: テストを書く
@@ -318,11 +335,12 @@ kata を使ったドメインロジックを書くとき、以下に従うこと
 1. **State は readonly plain object** — 集約の全ライフサイクルを1つの型で表現する
 2. **Error は tagged union** — `{ readonly tag: 'ErrorName' }` 形式。文脈情報も含める
 3. **1コントラクト = 1コマンド** — `define()` は単一のドメイン操作に対応させる
-4. **id は `集約名.コマンド名` 形式** — `cart.create`, `order.submit` など
+4. **name は `集約名.コマンド名` 形式** — `cart.create`, `order.submit` など
 5. **TSDoc `@accepts` で受け入れ条件を宣言** — ビジネス要求を自然文で記述。kata-cli が仕様書に反映する
-6. **ガードは `pass` / `err()` を返す** — boolean ではなく Result で表現
-7. **タグリテラルには `as const`** — 型推論を正確にするため
-8. **transition は純粋関数** — 副作用なし。スプレッド構文でイミュータブル更新
-9. **post / invariant はドメイン仕様の宣言** — ランタイム検証ではなく PBT 用
-10. **ユースケースは scenario() で組み立てる** — flow 関数で入力に応じた動的ステップ生成
-11. **テストでは `expectOk` / `expectErr` を使う** — Result のアサーション
+6. **ガードは `guard('label', fn)` で宣言** — ラベルは仕様書と PBT レポートに反映される
+7. **事後条件は `check('label', fn)` で宣言** — PBT でのみ検証
+8. **不変条件は `ensure('label', fn)` で宣言** — PBT でのみ検証
+9. **タグリテラルには `as const`** — 型推論を正確にするため
+10. **transition は純粋関数** — 副作用なし。スプレッド構文でイミュータブル更新
+11. **ユースケースは scenario() で組み立てる** — flow 関数で入力に応じた動的ステップ生成
+12. **テストでは `expectOk` / `expectErr` を使う** — Result のアサーション

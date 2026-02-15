@@ -132,13 +132,13 @@ export function generate(
 
   if (!isOk(result)) {
     throw new Error(
-      `Pipeline failed at step ${result.error.stepIndex}: ${result.error.contractId}`
+      `Pipeline failed at step ${result.error.stepIndex}: ${result.error.contractName}`
     );
   }
 
   const diagnostics = validateContracts(result.value.contracts);
   for (const d of diagnostics) {
-    console.error(`[${d.level}] ${d.contractId}: ${d.message}`);
+    console.error(`[${d.level}] ${d.contractName}: ${d.message}`);
   }
 
   return result.value.markdown;

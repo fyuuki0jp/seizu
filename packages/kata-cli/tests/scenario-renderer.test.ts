@@ -18,19 +18,19 @@ function makeLinkedScenario(scenario: ParsedScenario): LinkedScenario {
 
 describe('renderScenarioSection', () => {
   const scenario = makeLinkedScenario({
-    id: 'cart.normalPurchase',
+    name: 'cart.normalPurchase',
     accepts: [],
     description: '通常の購入フロー',
     variableName: 'normalPurchase',
     steps: [
       {
         index: 0,
-        contractId: 'cart.create',
+        contractName: 'cart.create',
         inputLiteral: "{ userId: 'alice' }",
       },
       {
         index: 1,
-        contractId: 'cart.addItem',
+        contractName: 'cart.addItem',
         inputLiteral: "{ itemId: 'apple', qty: 3, price: 1.5 }",
       },
     ],
@@ -71,11 +71,11 @@ describe('renderScenarioSection', () => {
 
   test('renders empty input as dash', () => {
     const emptyInputScenario = makeLinkedScenario({
-      id: 'test.emptyInput',
+      name: 'test.emptyInput',
       accepts: [],
       description: undefined,
       variableName: undefined,
-      steps: [{ index: 0, contractId: 'test.op', inputLiteral: '{}' }],
+      steps: [{ index: 0, contractName: 'test.op', inputLiteral: '{}' }],
       sourceFile: 'test.ts',
       line: 1,
     });
@@ -86,19 +86,19 @@ describe('renderScenarioSection', () => {
 
   test('strips type assertion from input', () => {
     const assertionScenario = makeLinkedScenario({
-      id: 'test.assertion',
+      name: 'test.assertion',
       accepts: [],
       description: undefined,
       variableName: undefined,
       steps: [
         {
           index: 0,
-          contractId: 'test.op',
+          contractName: 'test.op',
           inputLiteral: '{ filterIds: input.filterIds } as FilterInput',
         },
         {
           index: 1,
-          contractId: 'test.op2',
+          contractName: 'test.op2',
           inputLiteral: '{} as Record<string, never>',
         },
       ],
@@ -115,7 +115,7 @@ describe('renderScenarioSection', () => {
 
   test('renders scenario without description using id as heading', () => {
     const noDescScenario = makeLinkedScenario({
-      id: 'test.noDescription',
+      name: 'test.noDescription',
       accepts: [],
       description: undefined,
       variableName: undefined,

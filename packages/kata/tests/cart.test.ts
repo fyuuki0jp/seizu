@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { define, err, pass } from '../src/index';
+import { check, define, ensure, err, guard, pass } from '../src/index';
 import { expectErr, expectOk } from '../src/testing';
 
 // --- State ---
@@ -24,28 +24,36 @@ type ItemNotFound = {
 };
 
 // --- Contracts ---
-const createCart = define<CartState, { userId: string }, AlreadyExists>({
-  id: 'cart.create',
-  pre: [(s) => (!s.exists ? pass : err({ tag: 'AlreadyExists' as const }))],
-  transition: (state, input) => ({
-    ...state,
-    exists: true,
-    userId: input.userId,
-  }),
-});
+const createCart = define<CartState, { userId: string }, AlreadyExists>(
+  'cart.create',
+  {
+    pre: [
+      guard('not exists', (s) =>
+        !s.exists ? pass : err({ tag: 'AlreadyExists' as const })
+      ),
+    ],
+    transition: (state, input) => ({
+      ...state,
+      exists: true,
+      userId: input.userId,
+    }),
+  }
+);
 
 const addItem = define<
   CartState,
   { itemId: string; qty: number; price: number },
   CartNotFound | DuplicateItem
->({
-  id: 'cart.addItem',
+>('cart.addItem', {
   pre: [
-    (s) => (s.exists ? pass : err({ tag: 'CartNotFound' as const })),
-    (s, i) =>
+    guard('cart exists', (s) =>
+      s.exists ? pass : err({ tag: 'CartNotFound' as const })
+    ),
+    guard('no duplicate', (s, i) =>
       !s.items.has(i.itemId)
         ? pass
-        : err({ tag: 'DuplicateItem' as const, itemId: i.itemId }),
+        : err({ tag: 'DuplicateItem' as const, itemId: i.itemId })
+    ),
   ],
   transition: (state, input) => ({
     ...state,
@@ -54,29 +62,45 @@ const addItem = define<
       [input.itemId, { qty: input.qty, price: input.price }],
     ]),
   }),
-  post: [(before, after) => after.items.size === before.items.size + 1],
-  invariant: [(s) => [...s.items.values()].every((i) => i.qty > 0)],
+  post: [
+    check(
+      'item count increases',
+      (before, after) => after.items.size === before.items.size + 1
+    ),
+  ],
+  invariant: [
+    ensure('qty positive', (s) =>
+      [...s.items.values()].every((i) => i.qty > 0)
+    ),
+  ],
 });
 
 const removeItem = define<
   CartState,
   { itemId: string },
   CartNotFound | ItemNotFound
->({
-  id: 'cart.removeItem',
+>('cart.removeItem', {
   pre: [
-    (s) => (s.exists ? pass : err({ tag: 'CartNotFound' as const })),
-    (s, i) =>
+    guard('cart exists', (s) =>
+      s.exists ? pass : err({ tag: 'CartNotFound' as const })
+    ),
+    guard('item exists', (s, i) =>
       s.items.has(i.itemId)
         ? pass
-        : err({ tag: 'ItemNotFound' as const, itemId: i.itemId }),
+        : err({ tag: 'ItemNotFound' as const, itemId: i.itemId })
+    ),
   ],
   transition: (state, input) => {
     const items = new Map(state.items);
     items.delete(input.itemId);
     return { ...state, items };
   },
-  post: [(before, after) => after.items.size === before.items.size - 1],
+  post: [
+    check(
+      'item count decreases',
+      (before, after) => after.items.size === before.items.size - 1
+    ),
+  ],
 });
 
 // --- Tests ---
@@ -152,7 +176,7 @@ describe('cart.removeItem', () => {
 
 describe('contract metadata', () => {
   test('addItem exposes correct metadata', () => {
-    expect(addItem.id).toBe('cart.addItem');
+    expect(addItem.name).toBe('cart.addItem');
     expect(addItem.pre).toHaveLength(2);
     expect(addItem.post).toHaveLength(1);
     expect(addItem.invariant).toHaveLength(1);

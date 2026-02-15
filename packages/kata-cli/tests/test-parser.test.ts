@@ -24,7 +24,7 @@ describe('cart.addItem', () => {
 
     const suites = parseTestSuites(source);
     expect(suites).toHaveLength(1);
-    expect(suites[0].contractId).toBe('cart.addItem');
+    expect(suites[0].contractName).toBe('cart.addItem');
     expect(suites[0].tests).toHaveLength(2);
 
     expect(suites[0].tests[0].name).toBe('adds item to existing cart');
@@ -90,8 +90,8 @@ describe('cart.addItem', () => {
 
     const suites = parseTestSuites(source);
     expect(suites).toHaveLength(2);
-    expect(suites[0].contractId).toBe('cart.create');
-    expect(suites[1].contractId).toBe('cart.addItem');
+    expect(suites[0].contractName).toBe('cart.create');
+    expect(suites[1].contractName).toBe('cart.addItem');
   });
 
   test('handles it() as alias for test()', () => {

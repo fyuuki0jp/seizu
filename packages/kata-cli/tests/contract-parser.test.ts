@@ -9,14 +9,12 @@ function createSourceFile(code: string): ts.SourceFile {
 describe('parseContracts', () => {
   test('parses a simple define() call', () => {
     const source = createSourceFile(`
-import { define, err, pass } from 'kata';
+import { define, err, guard, pass } from 'kata';
 
 /** カートを作成する */
-const createCart = define<CartState, { userId: string }, AlreadyExists>({
-  id: 'cart.create',
+const createCart = define<CartState, { userId: string }, AlreadyExists>('cart.create', {
   pre: [
-    /** カートがまだ存在していないこと */
-    (s) => (!s.exists ? pass : err({ tag: 'AlreadyExists' as const })),
+    guard('カートがまだ存在していないこと', (s) => (!s.exists ? pass : err({ tag: 'AlreadyExists' as const }))),
   ],
   transition: (state, input) => ({ ...state, exists: true }),
 });
@@ -26,7 +24,7 @@ const createCart = define<CartState, { userId: string }, AlreadyExists>({
     expect(contracts).toHaveLength(1);
 
     const contract = contracts[0];
-    expect(contract.id).toBe('cart.create');
+    expect(contract.name).toBe('cart.create');
     expect(contract.variableName).toBe('createCart');
     expect(contract.description).toBe('カートを作成する');
     expect(contract.typeInfo.stateTypeName).toBe('CartState');
@@ -46,24 +44,19 @@ const createCart = define<CartState, { userId: string }, AlreadyExists>({
 
   test('parses contract with post and invariant', () => {
     const source = createSourceFile(`
-import { define, err, pass } from 'kata';
+import { check, define, ensure, err, guard, pass } from 'kata';
 
-const addItem = define<CartState, Input, Error>({
-  id: 'cart.addItem',
+const addItem = define<CartState, Input, Error>('cart.addItem', {
   pre: [
-    /** カートが存在していること */
-    (s) => (s.exists ? pass : err({ tag: 'CartNotFound' as const })),
-    /** アイテムが重複していないこと */
-    (s, i) => (!s.items.has(i.itemId) ? pass : err({ tag: 'DuplicateItem' as const, itemId: i.itemId })),
+    guard('カートが存在していること', (s) => (s.exists ? pass : err({ tag: 'CartNotFound' as const }))),
+    guard('アイテムが重複していないこと', (s, i) => (!s.items.has(i.itemId) ? pass : err({ tag: 'DuplicateItem' as const, itemId: i.itemId }))),
   ],
   transition: (state, input) => state,
   post: [
-    /** アイテム数が1つ増加する */
-    (before, after) => after.items.size === before.items.size + 1,
+    check('アイテム数が1つ増加する', (before, after) => after.items.size === before.items.size + 1),
   ],
   invariant: [
-    /** すべてのアイテムの数量が正の値である */
-    (s) => true,
+    ensure('すべてのアイテムの数量が正の値である', (s) => true),
   ],
 });
 `);
@@ -72,7 +65,7 @@ const addItem = define<CartState, Input, Error>({
     expect(contracts).toHaveLength(1);
 
     const contract = contracts[0];
-    expect(contract.id).toBe('cart.addItem');
+    expect(contract.name).toBe('cart.addItem');
 
     expect(contract.guards).toHaveLength(2);
     expect(contract.guards[0].description).toBe('カートが存在していること');
@@ -91,16 +84,14 @@ const addItem = define<CartState, Input, Error>({
 
   test('parses multiple contracts in one file', () => {
     const source = createSourceFile(`
-import { define, err, pass } from 'kata';
+import { define, pass } from 'kata';
 
-const a = define<S, I, E>({
-  id: 'domain.a',
+const a = define<S, I, E>('domain.a', {
   pre: [],
   transition: (s, i) => s,
 });
 
-const b = define<S, I, E>({
-  id: 'domain.b',
+const b = define<S, I, E>('domain.b', {
   pre: [],
   transition: (s, i) => s,
 });
@@ -108,18 +99,17 @@ const b = define<S, I, E>({
 
     const contracts = parseContracts(source);
     expect(contracts).toHaveLength(2);
-    expect(contracts[0].id).toBe('domain.a');
-    expect(contracts[1].id).toBe('domain.b');
+    expect(contracts[0].name).toBe('domain.a');
+    expect(contracts[1].name).toBe('domain.b');
   });
 
   test('handles contract without TSDoc', () => {
     const source = createSourceFile(`
-import { define, err, pass } from 'kata';
+import { define, err, guard, pass } from 'kata';
 
-const createCart = define<S, I, E>({
-  id: 'cart.create',
+const createCart = define<S, I, E>('cart.create', {
   pre: [
-    (s) => (!s.exists ? pass : err({ tag: 'AlreadyExists' as const })),
+    guard('cart must not exist', (s) => (!s.exists ? pass : err({ tag: 'AlreadyExists' as const }))),
   ],
   transition: (s, i) => s,
 });
@@ -128,14 +118,13 @@ const createCart = define<S, I, E>({
     const contracts = parseContracts(source);
     expect(contracts).toHaveLength(1);
     expect(contracts[0].description).toBeUndefined();
-    expect(contracts[0].guards[0].description).toBeUndefined();
+    expect(contracts[0].guards[0].description).toBe('cart must not exist');
     expect(contracts[0].guards[0].errorTags).toEqual(['AlreadyExists']);
   });
 
   test('handles contract without type arguments', () => {
     const source = createSourceFile(`
-const x = define({
-  id: 'test',
+const x = define('test', {
   pre: [],
   transition: (s) => s,
 });
@@ -148,19 +137,15 @@ const x = define({
 
   test('parses contract with reference guards (identifiers in pre/post/invariant)', () => {
     const source = createSourceFile(`
-import { define, err, pass } from 'kata';
+import { define, err, guard, check, ensure, pass } from 'kata';
 
-/** Cart must exist */
-const cartExistsGuard = (s) => s.exists ? pass : err({ tag: 'CartNotFound' as const });
+const cartExistsGuard = guard('Cart must exist', (s) => s.exists ? pass : err({ tag: 'CartNotFound' as const }));
 
-/** Count increases */
-const countUpCondition = (before, after) => after.items.size > before.items.size;
+const countUpCondition = check('Count increases', (before, after) => after.items.size > before.items.size);
 
-/** Qty positive */
-const qtyPositiveInvariant = (s) => true;
+const qtyPositiveInvariant = ensure('Qty positive', (s) => true);
 
-const addItem = define<S, I, E>({
-  id: 'cart.addItem',
+const addItem = define<S, I, E>('cart.addItem', {
   pre: [cartExistsGuard],
   transition: (s) => s,
   post: [countUpCondition],
@@ -195,27 +180,21 @@ const addItem = define<S, I, E>({
     expect(contracts).toHaveLength(0);
   });
 
-  test('returns empty for define() with non-object argument', () => {
-    const source = createSourceFile(`const x = define('string');`);
+  test('returns empty for define() with non-string first argument', () => {
+    const source = createSourceFile(`const x = define({}, {});`);
     const contracts = parseContracts(source);
     expect(contracts).toHaveLength(0);
   });
 
-  test('returns empty for define() without id property', () => {
-    const source = createSourceFile(`
-const x = define({
-  pre: [],
-  transition: (s) => s,
-});
-`);
+  test('returns empty for define() with only one argument', () => {
+    const source = createSourceFile(`const x = define('test');`);
     const contracts = parseContracts(source);
     expect(contracts).toHaveLength(0);
   });
 
   test('handles define() not inside a variable declaration', () => {
     const source = createSourceFile(`
-export default define<S, I, E>({
-  id: 'exported.contract',
+export default define<S, I, E>('exported.contract', {
   pre: [],
   transition: (s) => s,
 });
@@ -226,26 +205,11 @@ export default define<S, I, E>({
     expect(contracts[0].description).toBeUndefined();
   });
 
-  test('handles guard with non-string id property value', () => {
-    const source = createSourceFile(`
-const x = define<S, I, E>({
-  id: 'test.guard',
-  pre: [
-    { id: someVariable, check: (s) => true, error: () => ({ tag: 'E' }) },
-  ],
-  transition: (s) => s,
-});
-`);
-    const contracts = parseContracts(source);
-    expect(contracts).toHaveLength(1);
-  });
-
   test('handles guards that are function expressions', () => {
     const source = createSourceFile(`
-const x = define<S, I, E>({
-  id: 'test.funcexpr',
+const x = define<S, I, E>('test.funcexpr', {
   pre: [
-    function guard(s) { return s.exists ? pass : err({ tag: 'NotFound' as const }); },
+    guard('must be found', function guard(s) { return s.exists ? pass : err({ tag: 'NotFound' as const }); }),
   ],
   transition: (s) => s,
 });
@@ -258,8 +222,7 @@ const x = define<S, I, E>({
 
   test('falls back to description property when no TSDoc', () => {
     const source = createSourceFile(`
-const x = define<S, I, E>({
-  id: 'test.descprop',
+const x = define<S, I, E>('test.descprop', {
   description: 'Inline description',
   pre: [],
   transition: (s) => s,
@@ -276,8 +239,7 @@ const x = define<S, I, E>({
 /** @accepts Requirement A
  * @accepts Requirement B
  */
-const x = define<S, I, E>({
-  id: 'test.accepts',
+const x = define<S, I, E>('test.accepts', {
   pre: [],
   transition: (s) => s,
 });
@@ -295,8 +257,7 @@ const x = define<S, I, E>({
  *
  * @accepts Immutable req
  */
-const x = define<S, I, E>({
-  id: 'test.asconst',
+const x = define<S, I, E>('test.asconst', {
   pre: [],
   transition: (s) => s,
 });
@@ -310,8 +271,7 @@ const x = define<S, I, E>({
 
   test('defaults accepts to empty array when not present', () => {
     const source = createSourceFile(`
-const x = define<S, I, E>({
-  id: 'test.noacc',
+const x = define<S, I, E>('test.noacc', {
   pre: [],
   transition: (s) => s,
 });
@@ -325,8 +285,7 @@ const x = define<S, I, E>({
   test('prefers TSDoc over description property', () => {
     const source = createSourceFile(`
 /** TSDoc description */
-const x = define<S, I, E>({
-  id: 'test.both',
+const x = define<S, I, E>('test.both', {
   description: 'Inline description',
   pre: [],
   transition: (s) => s,

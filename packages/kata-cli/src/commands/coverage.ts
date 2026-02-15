@@ -96,7 +96,7 @@ export function registerCoverageCommand(cli: CAC): void {
         });
         if (!isOk(result)) {
           console.error(
-            `Pipeline failed at step ${result.error.stepIndex}: ${result.error.contractId}`
+            `Pipeline failed at step ${result.error.stepIndex}: ${result.error.contractName}`
           );
           process.exit(1);
           return;

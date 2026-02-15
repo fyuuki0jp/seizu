@@ -1,7 +1,7 @@
 // Fixture: Contract definitions with TSDoc comments
 // This file simulates a user's domain contract definitions
 
-import { define, err, pass } from 'kata';
+import { check, define, ensure, err, guard, pass } from 'kata';
 
 type CartItem = { readonly qty: number; readonly price: number };
 
@@ -31,18 +31,21 @@ type ItemNotFound = {
  * @accepts ユーザーは新しいカートを作成できる
  * @accepts 既にカートが存在する場合はエラーが返される
  */
-export const createCart = define<CartState, { userId: string }, AlreadyExists>({
-  id: 'cart.create',
-  pre: [
-    /** カートがまだ存在していないこと */
-    (s) => (!s.exists ? pass : err({ tag: 'AlreadyExists' as const })),
-  ],
-  transition: (state, input) => ({
-    ...state,
-    exists: true,
-    userId: input.userId,
-  }),
-});
+export const createCart = define<CartState, { userId: string }, AlreadyExists>(
+  'cart.create',
+  {
+    pre: [
+      guard('カートがまだ存在していないこと', (s) =>
+        !s.exists ? pass : err({ tag: 'AlreadyExists' as const })
+      ),
+    ],
+    transition: (state, input) => ({
+      ...state,
+      exists: true,
+      userId: input.userId,
+    }),
+  }
+);
 
 /**
  * カートにアイテムを追加する
@@ -56,16 +59,16 @@ export const addItem = define<
   CartState,
   { itemId: string; qty: number; price: number },
   CartNotFound | DuplicateItem
->({
-  id: 'cart.addItem',
+>('cart.addItem', {
   pre: [
-    /** カートが存在していること */
-    (s) => (s.exists ? pass : err({ tag: 'CartNotFound' as const })),
-    /** 同じアイテムが既にカートに存在していないこと */
-    (s, i) =>
+    guard('カートが存在していること', (s) =>
+      s.exists ? pass : err({ tag: 'CartNotFound' as const })
+    ),
+    guard('同じアイテムが既にカートに存在していないこと', (s, i) =>
       !s.items.has(i.itemId)
         ? pass
-        : err({ tag: 'DuplicateItem' as const, itemId: i.itemId }),
+        : err({ tag: 'DuplicateItem' as const, itemId: i.itemId })
+    ),
   ],
   transition: (state, input) => ({
     ...state,
@@ -75,12 +78,15 @@ export const addItem = define<
     ]),
   }),
   post: [
-    /** アイテム数が1つ増加する */
-    (before, after) => after.items.size === before.items.size + 1,
+    check(
+      'アイテム数が1つ増加する',
+      (before, after) => after.items.size === before.items.size + 1
+    ),
   ],
   invariant: [
-    /** すべてのアイテムの数量が正の値である */
-    (s) => [...s.items.values()].every((i) => i.qty > 0),
+    ensure('すべてのアイテムの数量が正の値である', (s) =>
+      [...s.items.values()].every((i) => i.qty > 0)
+    ),
   ],
 });
 
@@ -88,19 +94,26 @@ export const removeItem = define<
   CartState,
   { itemId: string },
   CartNotFound | ItemNotFound
->({
-  id: 'cart.removeItem',
+>('cart.removeItem', {
   pre: [
-    (s) => (s.exists ? pass : err({ tag: 'CartNotFound' as const })),
-    (s, i) =>
+    guard('カートが存在していること', (s) =>
+      s.exists ? pass : err({ tag: 'CartNotFound' as const })
+    ),
+    guard('アイテムが存在していること', (s, i) =>
       s.items.has(i.itemId)
         ? pass
-        : err({ tag: 'ItemNotFound' as const, itemId: i.itemId }),
+        : err({ tag: 'ItemNotFound' as const, itemId: i.itemId })
+    ),
   ],
   transition: (state, input) => {
     const items = new Map(state.items);
     items.delete(input.itemId);
     return { ...state, items };
   },
-  post: [(before, after) => after.items.size === before.items.size - 1],
+  post: [
+    check(
+      'アイテム数が1つ減少する',
+      (before, after) => after.items.size === before.items.size - 1
+    ),
+  ],
 });

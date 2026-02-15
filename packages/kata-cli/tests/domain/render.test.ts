@@ -23,7 +23,7 @@ const messages = getMessages('en');
 
 function makeContract(overrides: Partial<ParsedContract> = {}): ParsedContract {
   return {
-    id: 'test.contract',
+    name: 'test.contract',
     accepts: [],
     description: 'Test contract description',
     typeInfo: {
@@ -67,7 +67,7 @@ function makeLinked(overrides: Partial<LinkedContract> = {}): LinkedContract {
   return {
     contract: makeContract(),
     testSuite: {
-      contractId: 'test.contract',
+      contractName: 'test.contract',
       tests: [
         {
           name: 'succeeds when state exists',
@@ -91,12 +91,12 @@ function makeLinked(overrides: Partial<LinkedContract> = {}): LinkedContract {
 function makeLinkedScenario(): LinkedScenario {
   return {
     scenario: {
-      id: 'test.flow',
+      name: 'test.flow',
       accepts: [],
       description: 'Test scenario flow',
       variableName: 'testFlow',
       steps: [
-        { index: 0, contractId: 'test.contract', inputLiteral: '{ id: 1 }' },
+        { index: 0, contractName: 'test.contract', inputLiteral: '{ id: 1 }' },
       ],
       sourceFile: 'test.ts',
       line: 20,
@@ -105,7 +105,7 @@ function makeLinkedScenario(): LinkedScenario {
       {
         step: {
           index: 0,
-          contractId: 'test.contract',
+          contractName: 'test.contract',
           inputLiteral: '{ id: 1 }',
         },
         contract: makeContract(),
@@ -118,7 +118,7 @@ function makeCoverageReport(): CoverageReport {
   return {
     contracts: [
       {
-        contractId: 'test.contract',
+        contractName: 'test.contract',
         hasTests: true,
         testCount: 2,
         successTestCount: 1,
@@ -170,7 +170,7 @@ describe('render.title', () => {
     const input = { title: 'Title', description: undefined };
     const after = renderTitle.transition(before, input);
     for (const post of renderTitle.post ?? []) {
-      expect(post(before, after, input)).toBe(true);
+      expect(post.fn(before, after, input)).toBe(true);
     }
   });
 });
@@ -182,7 +182,7 @@ describe('render.toc', () => {
     const contracts = [
       makeLinked(),
       makeLinked({
-        contract: makeContract({ id: 'test.other', description: 'Other' }),
+        contract: makeContract({ name: 'test.other', description: 'Other' }),
       }),
     ];
     const lines = expectOk(renderToc([], { contracts, messages }));
@@ -204,13 +204,13 @@ describe('render.toc', () => {
     const input = {
       contracts: [
         makeLinked(),
-        makeLinked({ contract: makeContract({ id: 'test.other' }) }),
+        makeLinked({ contract: makeContract({ name: 'test.other' }) }),
       ],
       messages,
     };
     const after = renderToc.transition(before, input);
     for (const post of renderToc.post ?? []) {
-      expect(post(before, after, input)).toBe(true);
+      expect(post.fn(before, after, input)).toBe(true);
     }
   });
 });
@@ -268,7 +268,7 @@ describe('render pure sections', () => {
 
   test('renders heading, accepts, then type table in order', () => {
     const contractWithAccepts = makeContract({
-      id: 'order.test',
+      name: 'order.test',
       accepts: ['Requirement 1'],
     });
     const lines = renderContractSections([], {
@@ -322,7 +322,7 @@ describe('render.markdown scenario', () => {
       flowEnabled: true,
       contracts: [
         makeLinked(),
-        makeLinked({ contract: makeContract({ id: 'x' }) }),
+        makeLinked({ contract: makeContract({ name: 'x' }) }),
       ],
       scenarios: [makeLinkedScenario()],
       messages,
@@ -340,7 +340,7 @@ describe('render.markdown scenario', () => {
       makeLinked(),
       makeLinked({
         contract: makeContract({
-          id: 'test.other',
+          name: 'test.other',
           description: 'Other contract',
           guards: [],
           conditions: [],
@@ -388,9 +388,9 @@ describe('render.markdown scenario', () => {
   });
 
   test('exposes contract metadata', () => {
-    expect(renderTitle.id).toBe('render.title');
-    expect(renderToc.id).toBe('render.toc');
-    expect(renderScenarios.id).toBe('render.scenarioSection');
-    expect(renderMarkdownScenario.id).toBe('render.markdown');
+    expect(renderTitle.name).toBe('render.title');
+    expect(renderToc.name).toBe('render.toc');
+    expect(renderScenarios.name).toBe('render.scenarioSection');
+    expect(renderMarkdownScenario.name).toBe('render.markdown');
   });
 });

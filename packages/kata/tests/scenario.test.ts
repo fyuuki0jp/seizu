@@ -1,5 +1,14 @@
 import { describe, expect, test } from 'vitest';
-import { define, err, isErr, isOk, pass, scenario, step } from '../src/index';
+import {
+  define,
+  err,
+  guard,
+  isErr,
+  isOk,
+  pass,
+  scenario,
+  step,
+} from '../src/index';
 
 type CartItem = { readonly qty: number; readonly price: number };
 type CartState = {
@@ -14,27 +23,35 @@ type DuplicateItem = {
   readonly itemId: string;
 };
 
-const createCart = define<CartState, { userId: string }, AlreadyExists>({
-  id: 'cart.create',
-  pre: [(s) => (!s.exists ? pass : err({ tag: 'AlreadyExists' as const }))],
-  transition: (state) => ({
-    ...state,
-    exists: true,
-  }),
-});
+const createCart = define<CartState, { userId: string }, AlreadyExists>(
+  'cart.create',
+  {
+    pre: [
+      guard('not exists', (s) =>
+        !s.exists ? pass : err({ tag: 'AlreadyExists' as const })
+      ),
+    ],
+    transition: (state) => ({
+      ...state,
+      exists: true,
+    }),
+  }
+);
 
 const addItem = define<
   CartState,
   { itemId: string; qty: number; price: number },
   CartNotFound | DuplicateItem
->({
-  id: 'cart.addItem',
+>('cart.addItem', {
   pre: [
-    (s) => (s.exists ? pass : err({ tag: 'CartNotFound' as const })),
-    (s, i) =>
+    guard('cart exists', (s) =>
+      s.exists ? pass : err({ tag: 'CartNotFound' as const })
+    ),
+    guard('no duplicate', (s, i) =>
       !s.items.has(i.itemId)
         ? pass
-        : err({ tag: 'DuplicateItem' as const, itemId: i.itemId }),
+        : err({ tag: 'DuplicateItem' as const, itemId: i.itemId })
+    ),
   ],
   transition: (state, input) => ({
     ...state,
@@ -55,9 +72,7 @@ type PurchaseInput = {
   price: number;
 };
 
-const purchase = scenario<CartState, PurchaseInput>({
-  id: 'cart.purchase',
-  description: '購入フロー',
+const purchase = scenario<CartState, PurchaseInput>('cart.purchase', {
   flow: (input) => [
     step(createCart, { userId: input.userId }),
     step(addItem, {
@@ -85,8 +100,7 @@ describe('scenario', () => {
   });
 
   test('state is threaded through steps', () => {
-    const multiAdd = scenario<CartState, { userId: string }>({
-      id: 'cart.multiAdd',
+    const multiAdd = scenario<CartState, { userId: string }>('cart.multiAdd', {
       flow: (input) => [
         step(createCart, { userId: input.userId }),
         step(addItem, { itemId: 'apple', qty: 1, price: 1.0 }),
@@ -114,14 +128,13 @@ describe('scenario', () => {
     expect(isErr(result2)).toBe(true);
     if (isErr(result2)) {
       expect(result2.error.stepIndex).toBe(0);
-      expect(result2.error.contractId).toBe('cart.create');
+      expect(result2.error.contractName).toBe('cart.create');
       expect(result2.error.error).toEqual({ tag: 'AlreadyExists' });
     }
   });
 
   test('empty flow → isOk, state unchanged', () => {
-    const noop = scenario<CartState, void>({
-      id: 'cart.noop',
+    const noop = scenario<CartState, void>('cart.noop', {
       flow: () => [],
     });
 
@@ -133,8 +146,7 @@ describe('scenario', () => {
   });
 
   test('metadata accessible on scenario object', () => {
-    expect(purchase.id).toBe('cart.purchase');
-    expect(purchase.description).toBe('購入フロー');
+    expect(purchase.name).toBe('cart.purchase');
     expect(typeof purchase.flow).toBe('function');
   });
 
@@ -144,12 +156,15 @@ describe('scenario', () => {
       items: { id: string; qty: number; price: number }[];
     };
 
-    const bulkPurchase = scenario<CartState, BulkInput>({
-      id: 'cart.bulkPurchase',
+    const bulkPurchase = scenario<CartState, BulkInput>('cart.bulkPurchase', {
       flow: (input) => [
         step(createCart, { userId: input.userId }),
         ...input.items.map((item) =>
-          step(addItem, { itemId: item.id, qty: item.qty, price: item.price })
+          step(addItem, {
+            itemId: item.id,
+            qty: item.qty,
+            price: item.price,
+          })
         ),
       ],
     });
@@ -172,8 +187,7 @@ describe('scenario', () => {
   test('dynamic step count with map', () => {
     type RepeatInput = { userId: string; count: number };
 
-    const repeatAdd = scenario<CartState, RepeatInput>({
-      id: 'cart.repeatAdd',
+    const repeatAdd = scenario<CartState, RepeatInput>('cart.repeatAdd', {
       flow: (input) => [
         step(createCart, { userId: input.userId }),
         ...Array.from({ length: input.count }, (_, i) =>
@@ -196,8 +210,7 @@ describe('scenario', () => {
       items: new Map([['apple', { qty: 1, price: 1.0 }]]),
     };
 
-    const addOnly = scenario<CartState, { itemId: string }>({
-      id: 'cart.addOnly',
+    const addOnly = scenario<CartState, { itemId: string }>('cart.addOnly', {
       flow: (input) => [
         step(addItem, { itemId: input.itemId, qty: 1, price: 1.0 }),
       ],
@@ -207,7 +220,7 @@ describe('scenario', () => {
     expect(isErr(result)).toBe(true);
     if (isErr(result)) {
       expect(result.error.stepIndex).toBe(0);
-      expect(result.error.contractId).toBe('cart.addItem');
+      expect(result.error.contractName).toBe('cart.addItem');
       expect(result.error.error).toEqual({
         tag: 'DuplicateItem',
         itemId: 'apple',

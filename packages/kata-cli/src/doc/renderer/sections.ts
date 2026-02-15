@@ -13,9 +13,9 @@ export function renderContractHeading(linked: LinkedContract): string {
 
   const firstLine = contract.description?.split('\n')[0]?.trim();
   if (firstLine) {
-    lines.push(`## ${contract.id} - ${firstLine}`);
+    lines.push(`## ${contract.name} - ${firstLine}`);
   } else {
-    lines.push(`## ${contract.id}`);
+    lines.push(`## ${contract.name}`);
   }
 
   lines.push('');

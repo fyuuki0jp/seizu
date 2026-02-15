@@ -14,7 +14,7 @@ describe('renderMarkdown', () => {
     contracts: [
       {
         contract: {
-          id: 'cart.addItem',
+          name: 'cart.addItem',
           accepts: [],
           description:
             'Add an item to the cart\n\nOnly possible when the cart exists and item is not duplicate.',
@@ -60,7 +60,7 @@ describe('renderMarkdown', () => {
           line: 10,
         },
         testSuite: {
-          contractId: 'cart.addItem',
+          contractName: 'cart.addItem',
           tests: [
             {
               name: 'adds item to existing cart',
@@ -136,7 +136,7 @@ describe('renderMarkdown', () => {
       contracts: [
         {
           contract: {
-            id: 'test.minimal',
+            name: 'test.minimal',
             accepts: [],
             description: undefined,
             typeInfo: {
@@ -170,7 +170,7 @@ describe('renderMarkdown', () => {
       contracts: [
         {
           contract: {
-            id: 'test.failure',
+            name: 'test.failure',
             accepts: [],
             description: undefined,
             typeInfo: {
@@ -186,7 +186,7 @@ describe('renderMarkdown', () => {
             line: 1,
           },
           testSuite: {
-            contractId: 'test.failure',
+            contractName: 'test.failure',
             tests: [
               {
                 name: 'should fail on invalid input',
@@ -215,7 +215,7 @@ describe('renderMarkdown', () => {
       contracts: [
         {
           contract: {
-            id: 'test.failure2',
+            name: 'test.failure2',
             accepts: [],
             description: undefined,
             typeInfo: {
@@ -231,7 +231,7 @@ describe('renderMarkdown', () => {
             line: 1,
           },
           testSuite: {
-            contractId: 'test.failure2',
+            contractName: 'test.failure2',
             tests: [
               {
                 name: 'returns NotFound when missing',
@@ -259,7 +259,7 @@ describe('renderMarkdown', () => {
       contracts: [
         {
           contract: {
-            id: 'cart.create',
+            name: 'cart.create',
             accepts: [],
             description: undefined,
             typeInfo: {
@@ -280,7 +280,7 @@ describe('renderMarkdown', () => {
       scenarios: [
         {
           scenario: {
-            id: 'flow.purchase',
+            name: 'flow.purchase',
             accepts: [],
             description: undefined,
             variableName: undefined,
@@ -306,7 +306,7 @@ describe('renderMarkdown', () => {
       contracts: [
         {
           contract: {
-            id: 'z.last',
+            name: 'z.last',
             accepts: [],
             description: undefined,
             typeInfo: {
@@ -325,7 +325,7 @@ describe('renderMarkdown', () => {
         },
         {
           contract: {
-            id: 'a.first',
+            name: 'a.first',
             accepts: [],
             description: undefined,
             typeInfo: {
@@ -356,7 +356,7 @@ describe('renderMarkdown', () => {
   test('renders flow hash, mermaid and summary when flow exists', () => {
     const flow: FlowArtifact = {
       ownerKind: 'contract',
-      ownerId: 'flow.contract',
+      ownerName: 'flow.contract',
       hash: 'abc123',
       mermaid: ['```mermaid', 'flowchart TD', '  n1["start"]', '```'].join(
         '\n'
@@ -379,7 +379,7 @@ describe('renderMarkdown', () => {
       contracts: [
         {
           contract: {
-            id: 'flow.contract',
+            name: 'flow.contract',
             accepts: [],
             description: undefined,
             typeInfo: {

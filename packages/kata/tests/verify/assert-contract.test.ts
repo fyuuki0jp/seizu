@@ -1,7 +1,7 @@
 import * as fc from 'fast-check';
 import { describe, expect, test } from 'vitest';
 import type { Contract, Result } from '../../src/index';
-import { define, err, ok, pass } from '../../src/index';
+import { check, define, ensure, err, guard, ok, pass } from '../../src/index';
 import { assertContractValid } from '../../src/verify/index';
 
 type State = { value: number };
@@ -13,12 +13,17 @@ const inputArb = fc.record({ amount: fc.integer({ min: 1, max: 50 }) });
 
 describe('assertContractValid', () => {
   test('passes for a correct contract', () => {
-    const contract = define<State, Input, Err>({
-      id: 'test.correct',
-      pre: [(_s, i) => (i.amount > 0 ? pass : err({ tag: 'NotPositive' }))],
+    const contract = define<State, Input, Err>('test.correct', {
+      pre: [
+        guard('positive', (_s, i) =>
+          i.amount > 0 ? pass : err({ tag: 'NotPositive' })
+        ),
+      ],
       transition: (s, i) => ({ value: s.value + i.amount }),
-      post: [(before, after) => after.value > before.value],
-      invariant: [() => true],
+      post: [
+        check('value increases', (before, after) => after.value > before.value),
+      ],
+      invariant: [ensure('always true', () => true)],
     });
 
     expect(() =>
@@ -31,14 +36,15 @@ describe('assertContractValid', () => {
   });
 
   test('throws for a contract with invariant violation', () => {
-    const contract = define<State, Input, Err>({
-      id: 'test.broken',
-      pre: [() => pass],
+    const contract = define<State, Input, Err>('test.broken', {
+      pre: [guard('always pass', () => pass)],
       transition: (s, i) => ({ value: s.value + i.amount }),
-      invariant: [(s) => s.value <= 100],
+      invariant: [ensure('under 100', (s) => s.value <= 100)],
     });
 
-    const wideStateArb = fc.record({ value: fc.integer({ min: 0, max: 200 }) });
+    const wideStateArb = fc.record({
+      value: fc.integer({ min: 0, max: 200 }),
+    });
     const wideInputArb = fc.record({
       amount: fc.integer({ min: 1, max: 200 }),
     });
@@ -57,13 +63,19 @@ describe('assertContractValid', () => {
       ok({ value: i.amount });
 
     const brokenContract = Object.assign(brokenExecute, {
-      id: 'broken.noGuard',
       pre: [
-        (_s: State, i: Input): Result<void, Err> =>
-          i.amount > 0 ? pass : err({ tag: 'NotPositive' }),
+        guard(
+          'positive',
+          (_s: State, i: Input): Result<void, Err> =>
+            i.amount > 0 ? pass : err({ tag: 'NotPositive' })
+        ),
       ],
       transition: (s: State, i: Input) => ({ value: s.value + i.amount }),
     }) as Contract<State, Input, Err>;
+    Object.defineProperty(brokenContract, 'name', {
+      value: 'broken.noGuard',
+      configurable: true,
+    });
 
     const anyInputArb = fc.record({
       amount: fc.integer({ min: -100, max: 100 }),
@@ -78,14 +90,17 @@ describe('assertContractValid', () => {
     ).toThrow('violation');
   });
 
-  test('error message includes contract id and violation details', () => {
+  test('error message includes contract name and violation details', () => {
     const brokenExecute = (): Result<State, Err> => err({ tag: 'Hidden' });
 
     const brokenContract = Object.assign(brokenExecute, {
-      id: 'broken.hidden',
-      pre: [(): Result<void, Err> => pass],
+      pre: [guard('always pass', (): Result<void, Err> => pass)],
       transition: (s: State) => s,
     }) as Contract<State, Input, Err>;
+    Object.defineProperty(brokenContract, 'name', {
+      value: 'broken.hidden',
+      configurable: true,
+    });
 
     try {
       assertContractValid(

@@ -55,7 +55,7 @@ function describeViolation(check: CheckResult): string {
 }
 
 function formatContract(result: ContractResult): string {
-  const lines: string[] = [`  ${result.contractId}`];
+  const lines: string[] = [`  ${result.contractName}`];
 
   const preChecks = result.checks.filter((c) => c.kind === 'pre');
   const postChecks = result.checks.filter((c) => c.kind === 'post');

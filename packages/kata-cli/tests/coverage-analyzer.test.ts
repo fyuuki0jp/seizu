@@ -7,7 +7,7 @@ describe('analyzeCoverage', () => {
     const linked: LinkedContract[] = [
       {
         contract: {
-          id: 'cart.addItem',
+          name: 'cart.addItem',
           accepts: [],
           description: 'Add item',
           typeInfo: {
@@ -38,7 +38,7 @@ describe('analyzeCoverage', () => {
           line: 1,
         },
         testSuite: {
-          contractId: 'cart.addItem',
+          contractName: 'cart.addItem',
           tests: [
             {
               name: 'adds item to existing cart',
@@ -68,7 +68,7 @@ describe('analyzeCoverage', () => {
 
     expect(report.contracts).toHaveLength(1);
     const contract = report.contracts[0];
-    expect(contract.contractId).toBe('cart.addItem');
+    expect(contract.contractName).toBe('cart.addItem');
     expect(contract.hasTests).toBe(true);
     expect(contract.testCount).toBe(3);
     expect(contract.successTestCount).toBe(1);
@@ -86,7 +86,7 @@ describe('analyzeCoverage', () => {
     const linked: LinkedContract[] = [
       {
         contract: {
-          id: 'order.create',
+          name: 'order.create',
           accepts: [],
           description: undefined,
           typeInfo: {
@@ -129,7 +129,7 @@ describe('analyzeCoverage', () => {
     const linked: LinkedContract[] = [
       {
         contract: {
-          id: 'cart.addItem',
+          name: 'cart.addItem',
           accepts: [],
           description: undefined,
           typeInfo: {
@@ -160,7 +160,7 @@ describe('analyzeCoverage', () => {
           line: 1,
         },
         testSuite: {
-          contractId: 'cart.addItem',
+          contractName: 'cart.addItem',
           tests: [
             {
               name: 'handles CartNotFound error',
@@ -201,7 +201,7 @@ describe('analyzeCoverage', () => {
     const linked: LinkedContract[] = [
       {
         contract: {
-          id: 'simple.op',
+          name: 'simple.op',
           accepts: [],
           description: undefined,
           typeInfo: {
@@ -217,7 +217,7 @@ describe('analyzeCoverage', () => {
           line: 1,
         },
         testSuite: {
-          contractId: 'simple.op',
+          contractName: 'simple.op',
           tests: [
             {
               name: 'works',
@@ -244,7 +244,7 @@ describe('analyzeCoverage', () => {
     const linked: LinkedContract[] = [
       {
         contract: {
-          id: 'test.op',
+          name: 'test.op',
           accepts: [],
           description: undefined,
           typeInfo: {
@@ -268,7 +268,7 @@ describe('analyzeCoverage', () => {
           line: 1,
         },
         testSuite: {
-          contractId: 'test.op',
+          contractName: 'test.op',
           tests: [
             {
               name: 'returns notfound when missing',
@@ -290,7 +290,7 @@ describe('analyzeCoverage', () => {
     const linked: LinkedContract[] = [
       {
         contract: {
-          id: 'a',
+          name: 'a',
           accepts: [],
           description: undefined,
           typeInfo: {
@@ -314,7 +314,7 @@ describe('analyzeCoverage', () => {
           line: 1,
         },
         testSuite: {
-          contractId: 'a',
+          contractName: 'a',
           tests: [
             {
               name: 'returns E1',
@@ -328,7 +328,7 @@ describe('analyzeCoverage', () => {
       },
       {
         contract: {
-          id: 'b',
+          name: 'b',
           accepts: [],
           description: undefined,
           typeInfo: {
@@ -355,7 +355,7 @@ describe('analyzeCoverage', () => {
       },
       {
         contract: {
-          id: 'c',
+          name: 'c',
           accepts: [],
           description: undefined,
           typeInfo: {

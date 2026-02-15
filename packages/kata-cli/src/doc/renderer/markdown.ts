@@ -34,7 +34,7 @@ export function renderMarkdown(
 
   if (!isOk(result)) {
     throw new Error(
-      `render.markdown failed at step ${result.error.stepIndex}: ${result.error.contractId}`
+      `render.markdown failed at step ${result.error.stepIndex}: ${result.error.contractName}`
     );
   }
 

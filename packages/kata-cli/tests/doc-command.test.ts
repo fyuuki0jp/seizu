@@ -122,13 +122,13 @@ function makeOptions(
   };
 }
 
-function makeFlow(ownerKind: 'contract' | 'scenario', ownerId: string) {
+function makeFlow(ownerKind: 'contract' | 'scenario', ownerName: string) {
   return {
     ownerKind,
-    ownerId,
+    ownerName,
     graph: { nodes: [], edges: [] },
     mermaid: 'graph TD',
-    hash: `${ownerKind}-${ownerId}`,
+    hash: `${ownerKind}-${ownerName}`,
     summary: {
       stepCount: 0,
       branchCount: 0,
@@ -252,7 +252,7 @@ describe('registerDocCommand', () => {
     });
     docGenerateMock.mockReturnValue({
       ok: false,
-      error: { stepIndex: 2, contractId: 'doc.render' },
+      error: { stepIndex: 2, contractName: 'doc.render' },
     });
 
     const { action } = createCliHarness();

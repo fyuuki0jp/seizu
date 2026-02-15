@@ -42,30 +42,31 @@ function parseScenarioCall(
   sourceFile: ts.SourceFile,
   contractVarMap: Map<string, string>
 ): ParsedScenario | undefined {
-  if (call.arguments.length === 0) return undefined;
+  if (call.arguments.length < 2) return undefined;
 
-  const arg = call.arguments[0];
-  if (!ts.isObjectLiteralExpression(arg)) return undefined;
+  const nameArg = call.arguments[0];
+  if (!ts.isStringLiteral(nameArg)) return undefined;
+  const name = nameArg.text;
 
-  const id = extractStringProperty(arg, 'id');
-  if (!id) return undefined;
+  const bodyArg = call.arguments[1];
+  if (!ts.isObjectLiteralExpression(bodyArg)) return undefined;
 
-  const steps = extractStepsFromFlow(arg, sourceFile, contractVarMap);
-  const flow = extractScenarioFlow(arg, sourceFile, id, contractVarMap);
+  const steps = extractStepsFromFlow(bodyArg, sourceFile, contractVarMap);
+  const flow = extractScenarioFlow(bodyArg, sourceFile, name, contractVarMap);
   const variableName = findEnclosingVariableName(call);
   const accepts = extractAcceptsTags(call, sourceFile);
   const tsdocDescription = variableName
     ? extractVariableTSDoc(variableName, sourceFile)
     : undefined;
   const description =
-    tsdocDescription ?? extractStringProperty(arg, 'description');
+    tsdocDescription ?? extractStringProperty(bodyArg, 'description');
 
   const line =
     sourceFile.getLineAndCharacterOfPosition(call.getStart(sourceFile)).line +
     1;
 
   return {
-    id,
+    name,
     accepts,
     description,
     variableName,
@@ -203,17 +204,17 @@ function parseStepCall(
 
   // First arg: contract reference
   const contractArg = args[0];
-  let contractId: string;
+  let contractName: string;
   if (ts.isIdentifier(contractArg)) {
-    contractId = contractVarMap.get(contractArg.text) ?? contractArg.text;
+    contractName = contractVarMap.get(contractArg.text) ?? contractArg.text;
   } else {
-    contractId = contractArg.getText(sourceFile);
+    contractName = contractArg.getText(sourceFile);
   }
 
   // Second arg: input literal
   const inputLiteral = args[1].getText(sourceFile);
 
-  return { index, contractId, inputLiteral };
+  return { index, contractName, inputLiteral };
 }
 
 /**
@@ -232,11 +233,8 @@ function buildContractVarMap(sourceFile: ts.SourceFile): Map<string, string> {
       node.initializer.expression.text === 'define'
     ) {
       const callArgs = node.initializer.arguments;
-      if (callArgs.length > 0 && ts.isObjectLiteralExpression(callArgs[0])) {
-        const id = extractStringProperty(callArgs[0], 'id');
-        if (id) {
-          map.set(node.name.text, id);
-        }
+      if (callArgs.length > 0 && ts.isStringLiteral(callArgs[0])) {
+        map.set(node.name.text, callArgs[0].text);
       }
     }
     ts.forEachChild(node, visit);

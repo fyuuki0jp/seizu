@@ -2,8 +2,8 @@ import { describe, expect, test } from 'vitest';
 import { linkContractsToTests } from '../src/doc/linker/contract-test-linker';
 import type { ParsedContract, ParsedTestSuite } from '../src/doc/types';
 
-const makeContract = (id: string): ParsedContract => ({
-  id,
+const makeContract = (name: string): ParsedContract => ({
+  name,
   accepts: [],
   description: undefined,
   typeInfo: {
@@ -19,8 +19,8 @@ const makeContract = (id: string): ParsedContract => ({
   line: 1,
 });
 
-const makeTestSuite = (contractId: string): ParsedTestSuite => ({
-  contractId,
+const makeTestSuite = (contractName: string): ParsedTestSuite => ({
+  contractName,
   tests: [
     {
       name: 'test case 1',
@@ -39,7 +39,7 @@ describe('linkContractsToTests', () => {
 
     const linked = linkContractsToTests(contracts, suites);
     expect(linked).toHaveLength(1);
-    expect(linked[0].contract.id).toBe('cart.addItem');
+    expect(linked[0].contract.name).toBe('cart.addItem');
     expect(linked[0].testSuite).toBeDefined();
     expect(linked[0].testSuite?.tests).toHaveLength(1);
   });
@@ -64,7 +64,7 @@ describe('linkContractsToTests', () => {
     const contracts = [makeContract('cart.addItem')];
     const suites: ParsedTestSuite[] = [
       {
-        contractId: 'cart.addItem',
+        contractName: 'cart.addItem',
         tests: [
           {
             name: 'from file 1',
@@ -76,7 +76,7 @@ describe('linkContractsToTests', () => {
         sourceFile: 'a.test.ts',
       },
       {
-        contractId: 'cart.addItem',
+        contractName: 'cart.addItem',
         tests: [
           {
             name: 'from file 2',

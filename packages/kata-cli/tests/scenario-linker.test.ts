@@ -2,9 +2,9 @@ import { describe, expect, test } from 'vitest';
 import { linkScenarios } from '../src/doc/linker/scenario-linker';
 import type { ParsedContract, ParsedScenario } from '../src/doc/types';
 
-function makeContract(id: string, variableName?: string): ParsedContract {
+function makeContract(name: string, variableName?: string): ParsedContract {
   return {
-    id,
+    name,
     accepts: [],
     description: undefined,
     typeInfo: {
@@ -22,11 +22,11 @@ function makeContract(id: string, variableName?: string): ParsedContract {
 }
 
 function makeScenario(
-  id: string,
+  name: string,
   steps: ParsedScenario['steps']
 ): ParsedScenario {
   return {
-    id,
+    name,
     accepts: [],
     description: undefined,
     variableName: undefined,
@@ -44,34 +44,34 @@ describe('linkScenarios', () => {
     ];
     const scenarios = [
       makeScenario('flow.purchase', [
-        { index: 0, contractId: 'cart.create', inputLiteral: '{}' },
-        { index: 1, contractId: 'cart.addItem', inputLiteral: '{}' },
+        { index: 0, contractName: 'cart.create', inputLiteral: '{}' },
+        { index: 1, contractName: 'cart.addItem', inputLiteral: '{}' },
       ]),
     ];
 
     const linked = linkScenarios(scenarios, contracts);
     expect(linked).toHaveLength(1);
-    expect(linked[0].resolvedSteps[0].contract?.id).toBe('cart.create');
-    expect(linked[0].resolvedSteps[1].contract?.id).toBe('cart.addItem');
+    expect(linked[0].resolvedSteps[0].contract?.name).toBe('cart.create');
+    expect(linked[0].resolvedSteps[1].contract?.name).toBe('cart.addItem');
   });
 
   test('resolves steps by variable name', () => {
     const contracts = [makeContract('cart.create', 'createCart')];
     const scenarios = [
       makeScenario('flow.test', [
-        { index: 0, contractId: 'createCart', inputLiteral: '{}' },
+        { index: 0, contractName: 'createCart', inputLiteral: '{}' },
       ]),
     ];
 
     const linked = linkScenarios(scenarios, contracts);
-    expect(linked[0].resolvedSteps[0].contract?.id).toBe('cart.create');
+    expect(linked[0].resolvedSteps[0].contract?.name).toBe('cart.create');
   });
 
   test('returns undefined for unresolved contract', () => {
     const contracts = [makeContract('cart.create')];
     const scenarios = [
       makeScenario('flow.test', [
-        { index: 0, contractId: 'unknown.op', inputLiteral: '{}' },
+        { index: 0, contractName: 'unknown.op', inputLiteral: '{}' },
       ]),
     ];
 
@@ -100,11 +100,11 @@ describe('linkScenarios', () => {
     ];
     const scenarios = [
       makeScenario('test', [
-        { index: 0, contractId: 'actual.id', inputLiteral: '{}' },
+        { index: 0, contractName: 'actual.id', inputLiteral: '{}' },
       ]),
     ];
 
     const linked = linkScenarios(scenarios, contracts);
-    expect(linked[0].resolvedSteps[0].contract?.id).toBe('actual.id');
+    expect(linked[0].resolvedSteps[0].contract?.name).toBe('actual.id');
   });
 });

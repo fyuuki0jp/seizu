@@ -15,16 +15,15 @@ function createSourceFile(source: string): ts.SourceFile {
 describe('flow extractors', () => {
   test('extracts deterministic contract and scenario flows', () => {
     const source = createSourceFile(`
-import { define, err, pass, scenario, step } from 'kata';
+import { define, err, guard, pass, scenario, step } from 'kata';
 
 type S = { readonly ok: boolean; readonly items: number[]; readonly flag: boolean };
 type I = { readonly n: number; readonly flag: boolean };
 type E = { readonly tag: 'Bad' };
 
-const add = define<S, I, E>({
-  id: 'demo.add',
+const add = define<S, I, E>('demo.add', {
   pre: [
-    (s) => (s.ok ? pass : err({ tag: 'Bad' as const })),
+    guard('must be ok', (s) => (s.ok ? pass : err({ tag: 'Bad' as const }))),
   ],
   transition: (state, input) => {
     if (input.flag) {
@@ -36,8 +35,7 @@ const add = define<S, I, E>({
   invariant: [(s) => s.items.length >= 0],
 });
 
-const flow = scenario<S, I>({
-  id: 'demo.flow',
+const flow = scenario<S, I>('demo.flow', {
   flow: (input) => {
     const steps = [];
     steps.push(step(add, { n: 1, flag: false }));
@@ -77,16 +75,15 @@ const flow = scenario<S, I>({
 
   test('marks unsupported syntax in contract transition', () => {
     const source = createSourceFile(`
-import { define, pass } from 'kata';
+import { define, guard, pass } from 'kata';
 
 type S = { readonly n: number };
 type I = { readonly n: number };
 
 type E = never;
 
-const c = define<S, I, E>({
-  id: 'demo.unsupported',
-  pre: [(s) => pass],
+const c = define<S, I, E>('demo.unsupported', {
+  pre: [guard('always pass', (s) => pass)],
   transition: (state, input) => {
     switch (input.n) {
       case 1:

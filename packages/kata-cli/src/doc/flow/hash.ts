@@ -3,20 +3,20 @@ import type { FlowGraph, FlowOwnerKind } from './types';
 
 export function hashFlow(
   ownerKind: FlowOwnerKind,
-  ownerId: string,
+  ownerName: string,
   graph: FlowGraph
 ): string {
-  const canonical = canonicalizeFlow(ownerKind, ownerId, graph);
+  const canonical = canonicalizeFlow(ownerKind, ownerName, graph);
   return createHash('sha256').update(canonical, 'utf-8').digest('hex');
 }
 
 function canonicalizeFlow(
   ownerKind: FlowOwnerKind,
-  ownerId: string,
+  ownerName: string,
   graph: FlowGraph
 ): string {
   const lines: string[] = [];
-  lines.push(`owner:${ownerKind}:${ownerId}`);
+  lines.push(`owner:${ownerKind}:${ownerName}`);
 
   for (const node of graph.nodes) {
     lines.push(`node:${node.id}|${node.kind}|${normalizeText(node.label)}`);

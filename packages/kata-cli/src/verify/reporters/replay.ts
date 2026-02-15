@@ -33,11 +33,11 @@ function violationLabel(violation: CheckResult['violation']): string {
   }
 }
 
-function formatFailure(contractId: string, check: CheckResult): string {
+function formatFailure(contractName: string, check: CheckResult): string {
   const lines: string[] = [];
   const label = violationLabel(check.violation);
 
-  lines.push(`\u26A0 ${label}: ${contractId} > ${check.id}`);
+  lines.push(`\u26A0 ${label}: ${contractName} > ${check.id}`);
   lines.push('');
 
   if (check.counterexample) {
@@ -63,7 +63,7 @@ function formatFailure(contractId: string, check: CheckResult): string {
 function formatContractFailures(result: ContractResult): string[] {
   return result.checks
     .filter((c) => c.status === 'failed')
-    .map((check) => formatFailure(result.contractId, check));
+    .map((check) => formatFailure(result.contractName, check));
 }
 
 export function replay(result: VerifyResult): string {

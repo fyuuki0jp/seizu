@@ -51,33 +51,34 @@ function parseDefineCall(
   call: ts.CallExpression,
   sourceFile: ts.SourceFile
 ): ParsedContract | undefined {
-  if (call.arguments.length === 0) return undefined;
+  if (call.arguments.length < 2) return undefined;
 
-  const arg = call.arguments[0];
-  if (!ts.isObjectLiteralExpression(arg)) return undefined;
+  const nameArg = call.arguments[0];
+  if (!ts.isStringLiteral(nameArg)) return undefined;
+  const name = nameArg.text;
 
-  const id = extractStringProperty(arg, 'id');
-  if (!id) return undefined;
+  const bodyArg = call.arguments[1];
+  if (!ts.isObjectLiteralExpression(bodyArg)) return undefined;
 
   const typeInfo = extractTypeInfo(call, sourceFile);
-  const guards = extractGuards(arg, sourceFile);
-  const conditions = extractConditions(arg, sourceFile);
-  const invariants = extractInvariants(arg, sourceFile);
-  const flow = extractContractFlow(arg, sourceFile, id);
+  const guards = extractGuards(bodyArg, sourceFile);
+  const conditions = extractConditions(bodyArg, sourceFile);
+  const invariants = extractInvariants(bodyArg, sourceFile);
+  const flow = extractContractFlow(bodyArg, sourceFile, name);
   const variableName = findEnclosingVariableName(call);
   const accepts = extractAcceptsTags(call, sourceFile);
   const tsdocDescription = variableName
     ? extractVariableTSDoc(variableName, sourceFile)
     : undefined;
   const description =
-    tsdocDescription ?? extractStringProperty(arg, 'description');
+    tsdocDescription ?? extractStringProperty(bodyArg, 'description');
 
   const line =
     sourceFile.getLineAndCharacterOfPosition(call.getStart(sourceFile)).line +
     1;
 
   return {
-    id,
+    name,
     accepts,
     description,
     typeInfo,
@@ -119,13 +120,42 @@ function extractGuards(
   if (!preArray) return [];
 
   return preArray.elements.map((element, index) => {
+    // Identifier reference to a guard variable
     if (ts.isIdentifier(element)) {
+      const resolved = resolveGuardCall(element.text, sourceFile);
       return {
         index,
-        description: extractVariableTSDoc(element.text, sourceFile),
-        errorTags: resolveIdentifierErrorTags(element.text, sourceFile),
+        description:
+          resolved?.label ?? extractVariableTSDoc(element.text, sourceFile),
+        errorTags:
+          resolved?.errorTags ??
+          resolveIdentifierErrorTags(element.text, sourceFile),
         kind: 'reference' as const,
         referenceName: element.text,
+      };
+    }
+
+    // guard('label', fn) call expression
+    if (
+      ts.isCallExpression(element) &&
+      ts.isIdentifier(element.expression) &&
+      element.expression.text === 'guard'
+    ) {
+      const label =
+        element.arguments.length > 0 && ts.isStringLiteral(element.arguments[0])
+          ? element.arguments[0].text
+          : undefined;
+      const fnArg = element.arguments[1];
+      const errorTags =
+        fnArg && (ts.isArrowFunction(fnArg) || ts.isFunctionExpression(fnArg))
+          ? extractErrorTags(fnArg, sourceFile)
+          : [];
+      return {
+        index,
+        description: label,
+        errorTags,
+        kind: 'inline' as const,
+        referenceName: undefined,
       };
     }
 
@@ -151,11 +181,30 @@ function extractConditions(
 
   return postArray.elements.map((element, index) => {
     if (ts.isIdentifier(element)) {
+      const resolved = resolveLabeledCall(element.text, 'check', sourceFile);
       return {
         index,
-        description: extractVariableTSDoc(element.text, sourceFile),
+        description: resolved ?? extractVariableTSDoc(element.text, sourceFile),
         kind: 'reference' as const,
         referenceName: element.text,
+      };
+    }
+
+    // check('label', fn) call expression
+    if (
+      ts.isCallExpression(element) &&
+      ts.isIdentifier(element.expression) &&
+      element.expression.text === 'check'
+    ) {
+      const label =
+        element.arguments.length > 0 && ts.isStringLiteral(element.arguments[0])
+          ? element.arguments[0].text
+          : undefined;
+      return {
+        index,
+        description: label,
+        kind: 'inline' as const,
+        referenceName: undefined,
       };
     }
 
@@ -177,11 +226,30 @@ function extractInvariants(
 
   return invArray.elements.map((element, index) => {
     if (ts.isIdentifier(element)) {
+      const resolved = resolveLabeledCall(element.text, 'ensure', sourceFile);
       return {
         index,
-        description: extractVariableTSDoc(element.text, sourceFile),
+        description: resolved ?? extractVariableTSDoc(element.text, sourceFile),
         kind: 'reference' as const,
         referenceName: element.text,
+      };
+    }
+
+    // ensure('label', fn) call expression
+    if (
+      ts.isCallExpression(element) &&
+      ts.isIdentifier(element.expression) &&
+      element.expression.text === 'ensure'
+    ) {
+      const label =
+        element.arguments.length > 0 && ts.isStringLiteral(element.arguments[0])
+          ? element.arguments[0].text
+          : undefined;
+      return {
+        index,
+        description: label,
+        kind: 'inline' as const,
+        referenceName: undefined,
       };
     }
 
@@ -212,4 +280,71 @@ function resolveIdentifierErrorTags(
     }
   }
   return [];
+}
+
+/**
+ * Resolve identifier reference to a guard('label', fn) call,
+ * extracting both label and error tags.
+ */
+function resolveGuardCall(
+  identifierName: string,
+  sourceFile: ts.SourceFile
+): { label: string; errorTags: string[] } | undefined {
+  for (const statement of sourceFile.statements) {
+    if (!ts.isVariableStatement(statement)) continue;
+    for (const decl of statement.declarationList.declarations) {
+      if (
+        ts.isIdentifier(decl.name) &&
+        decl.name.text === identifierName &&
+        decl.initializer &&
+        ts.isCallExpression(decl.initializer) &&
+        ts.isIdentifier(decl.initializer.expression) &&
+        decl.initializer.expression.text === 'guard'
+      ) {
+        const args = decl.initializer.arguments;
+        const label =
+          args.length > 0 && ts.isStringLiteral(args[0])
+            ? args[0].text
+            : undefined;
+        if (!label) return undefined;
+        const fnArg = args[1];
+        const errorTags =
+          fnArg && (ts.isArrowFunction(fnArg) || ts.isFunctionExpression(fnArg))
+            ? extractErrorTags(fnArg, sourceFile)
+            : [];
+        return { label, errorTags };
+      }
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Resolve identifier reference to a check('label', fn) or ensure('label', fn) call,
+ * extracting the label string.
+ */
+function resolveLabeledCall(
+  identifierName: string,
+  calleeName: string,
+  sourceFile: ts.SourceFile
+): string | undefined {
+  for (const statement of sourceFile.statements) {
+    if (!ts.isVariableStatement(statement)) continue;
+    for (const decl of statement.declarationList.declarations) {
+      if (
+        ts.isIdentifier(decl.name) &&
+        decl.name.text === identifierName &&
+        decl.initializer &&
+        ts.isCallExpression(decl.initializer) &&
+        ts.isIdentifier(decl.initializer.expression) &&
+        decl.initializer.expression.text === calleeName
+      ) {
+        const args = decl.initializer.arguments;
+        if (args.length > 0 && ts.isStringLiteral(args[0])) {
+          return args[0].text;
+        }
+      }
+    }
+  }
+  return undefined;
 }

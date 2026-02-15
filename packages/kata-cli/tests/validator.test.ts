@@ -4,7 +4,7 @@ import { validateContracts } from '../src/doc/validator';
 
 function makeContract(overrides: Partial<ParsedContract> = {}): ParsedContract {
   return {
-    id: 'test.contract',
+    name: 'test.contract',
     accepts: [],
     description: undefined,
     typeInfo: {
@@ -25,12 +25,12 @@ function makeContract(overrides: Partial<ParsedContract> = {}): ParsedContract {
 
 describe('validateContracts', () => {
   test('reports error for contract without @accepts', () => {
-    const contracts = [makeContract({ id: 'cart.create', accepts: [] })];
+    const contracts = [makeContract({ name: 'cart.create', accepts: [] })];
     const diagnostics = validateContracts(contracts);
     expect(diagnostics).toEqual([
       {
         level: 'error',
-        contractId: 'cart.create',
+        contractName: 'cart.create',
         message: 'Missing @accepts tag in TSDoc comment',
       },
     ]);
@@ -39,7 +39,7 @@ describe('validateContracts', () => {
   test('returns no diagnostics for contract with @accepts', () => {
     const contracts = [
       makeContract({
-        id: 'cart.create',
+        name: 'cart.create',
         accepts: ['Users can create a cart'],
       }),
     ];
@@ -49,14 +49,14 @@ describe('validateContracts', () => {
 
   test('reports errors for multiple contracts without @accepts', () => {
     const contracts = [
-      makeContract({ id: 'cart.create', accepts: [] }),
-      makeContract({ id: 'cart.addItem', accepts: ['Add item'] }),
-      makeContract({ id: 'cart.remove', accepts: [] }),
+      makeContract({ name: 'cart.create', accepts: [] }),
+      makeContract({ name: 'cart.addItem', accepts: ['Add item'] }),
+      makeContract({ name: 'cart.remove', accepts: [] }),
     ];
     const diagnostics = validateContracts(contracts);
     expect(diagnostics).toHaveLength(2);
-    expect(diagnostics[0].contractId).toBe('cart.create');
-    expect(diagnostics[1].contractId).toBe('cart.remove');
+    expect(diagnostics[0].contractName).toBe('cart.create');
+    expect(diagnostics[1].contractName).toBe('cart.remove');
   });
 
   test('returns empty array for empty input', () => {

@@ -26,7 +26,7 @@ export function renderCoverageSummary(
         ? `${contract.coveredErrorTags}/${contract.totalErrorTags}`
         : '-';
     lines.push(
-      `| ${contract.contractId} | ${contract.testCount} | ${errorCov} | ${status} |`
+      `| ${contract.contractName} | ${contract.testCount} | ${errorCov} | ${status} |`
     );
   }
 

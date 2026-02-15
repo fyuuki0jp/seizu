@@ -86,7 +86,7 @@ function analyzeContract(linked: LinkedContract): ContractCoverage {
   const coveredErrorTags = errorTags.filter((e) => e.hasFailureTest).length;
 
   return {
-    contractId: contract.id,
+    contractName: contract.name,
     hasTests,
     testCount: tests.length,
     successTestCount,

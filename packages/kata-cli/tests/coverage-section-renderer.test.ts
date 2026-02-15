@@ -10,7 +10,7 @@ describe('renderCoverageSummary', () => {
   const report: CoverageReport = {
     contracts: [
       {
-        contractId: 'cart.create',
+        contractName: 'cart.create',
         hasTests: true,
         testCount: 2,
         totalErrorTags: 1,
@@ -18,7 +18,7 @@ describe('renderCoverageSummary', () => {
         uncoveredErrorTags: [],
       },
       {
-        contractId: 'cart.addItem',
+        contractName: 'cart.addItem',
         hasTests: false,
         testCount: 0,
         totalErrorTags: 2,
@@ -58,7 +58,7 @@ describe('renderCoverageSummary', () => {
     const simpleReport: CoverageReport = {
       contracts: [
         {
-          contractId: 'test.op',
+          contractName: 'test.op',
           hasTests: true,
           testCount: 1,
           totalErrorTags: 0,

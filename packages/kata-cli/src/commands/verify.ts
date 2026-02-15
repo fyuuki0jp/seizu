@@ -27,7 +27,7 @@ export function registerVerifyCommand(cli: CAC): void {
 
         let entries = verifyConfig.contracts;
         if (contracts.length > 0) {
-          entries = entries.filter((e) => contracts.includes(e.contract.id));
+          entries = entries.filter((e) => contracts.includes(e.contract.name));
           if (entries.length === 0) {
             console.error(`No contracts matched: ${contracts.join(', ')}`);
             process.exit(2);

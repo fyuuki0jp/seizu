@@ -225,7 +225,7 @@ describe('registerCoverageCommand', () => {
     });
     coverageGenerateMock.mockReturnValue({
       ok: false,
-      error: { stepIndex: 2, contractId: 'doc.link' },
+      error: { stepIndex: 2, contractName: 'doc.link' },
     });
 
     const action = createCliHarness();

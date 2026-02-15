@@ -60,15 +60,15 @@ export class FlowGraphBuilder {
 
 export function buildFlowArtifact(
   ownerKind: FlowOwnerKind,
-  ownerId: string,
+  ownerName: string,
   graph: FlowGraph
 ): FlowArtifact {
   const summary = summarizeFlow(graph);
-  const hash = hashFlow(ownerKind, ownerId, graph);
+  const hash = hashFlow(ownerKind, ownerName, graph);
   const mermaid = renderMermaid(graph);
   return {
     ownerKind,
-    ownerId,
+    ownerName,
     graph,
     mermaid,
     hash,

@@ -6,7 +6,7 @@ export interface ErrorTagCoverage {
 }
 
 export interface ContractCoverage {
-  readonly contractId: string;
+  readonly contractName: string;
   readonly hasTests: boolean;
   readonly testCount: number;
   readonly successTestCount: number;

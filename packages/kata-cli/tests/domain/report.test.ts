@@ -17,7 +17,7 @@ function makeContractResult(
   overrides: Partial<ContractResult> = {}
 ): ContractResult {
   return {
-    contractId: 'cart.addItem',
+    contractName: 'cart.addItem',
     checks: [makeCheck()],
     ...overrides,
   };
@@ -46,7 +46,7 @@ describe('report.summary', () => {
     const result = makeVerifyResult({
       results: [
         makeContractResult(),
-        makeContractResult({ contractId: 'cart.removeItem' }),
+        makeContractResult({ contractName: 'cart.removeItem' }),
       ],
       summary: { contracts: 2, checks: 2, passed: 2, failed: 0 },
     });
@@ -66,15 +66,15 @@ describe('report.summary', () => {
     const input = { result: makeVerifyResult() };
     const after = reportSummary.transition(before, input);
     for (const post of reportSummary.post ?? []) {
-      expect(post(before, after, input)).toBe(true);
+      expect(post.fn(before, after, input)).toBe(true);
     }
     for (const inv of reportSummary.invariant ?? []) {
-      expect(inv(after)).toBe(true);
+      expect(inv.fn(after)).toBe(true);
     }
   });
 
   test('exposes contract metadata', () => {
-    expect(reportSummary.id).toBe('report.summary');
+    expect(reportSummary.name).toBe('report.summary');
     expect(reportSummary.pre.length).toBe(1);
   });
 });
@@ -138,15 +138,15 @@ describe('report.replay', () => {
     };
     const after = reportReplay.transition(before, input);
     for (const post of reportReplay.post ?? []) {
-      expect(post(before, after, input)).toBe(true);
+      expect(post.fn(before, after, input)).toBe(true);
     }
     for (const inv of reportReplay.invariant ?? []) {
-      expect(inv(after)).toBe(true);
+      expect(inv.fn(after)).toBe(true);
     }
   });
 
   test('exposes contract metadata', () => {
-    expect(reportReplay.id).toBe('report.replay');
+    expect(reportReplay.name).toBe('report.replay');
     expect(reportReplay.pre.length).toBe(1);
   });
 });

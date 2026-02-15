@@ -1,4 +1,4 @@
-import { define, err, pass, scenario, step } from 'kata';
+import { check, define, err, guard, pass, scenario, step } from 'kata';
 import { renderCoverageSummary } from '../doc/renderer/coverage-section';
 import { renderFlowSection } from '../doc/renderer/flow-section';
 import { renderScenarioSection } from '../doc/renderer/scenario-section';
@@ -25,66 +25,76 @@ import type {
 // === render.title ===
 
 /** @accepts ドキュメントのタイトルと説明をレンダリングできる */
-export const renderTitle = define<readonly string[], TitleInput, RenderError>({
-  id: 'render.title',
-  pre: [
-    /** Document title must not be empty. */
-    (_, input) =>
-      input.title.length > 0 ? pass : err({ tag: 'TitleEmpty' as const }),
-  ],
-  transition: (lines, input) => {
-    const result = [...lines, `# ${input.title}`, ''];
-    if (input.description) {
-      return [...result, `> ${input.description}`, ''];
-    }
-    return result;
-  },
-  post: [
-    /** Rendering a title always appends new lines. */
-    (before, after) => after.length > before.length,
-  ],
-});
+export const renderTitle = define<readonly string[], TitleInput, RenderError>(
+  'render.title',
+  {
+    pre: [
+      guard('document title must not be empty', (_, input) =>
+        input.title.length > 0 ? pass : err({ tag: 'TitleEmpty' as const })
+      ),
+    ],
+    transition: (lines, input) => {
+      const result = [...lines, `# ${input.title}`, ''];
+      if (input.description) {
+        return [...result, `> ${input.description}`, ''];
+      }
+      return result;
+    },
+    post: [
+      check(
+        'rendering a title always appends new lines',
+        (before, after) => after.length > before.length
+      ),
+    ],
+  }
+);
 
 // === render.toc ===
 
 /** @accepts 2つ以上のContractがある場合に目次を生成できる */
-export const renderToc = define<readonly string[], TocInput, RenderError>({
-  id: 'render.toc',
-  pre: [
-    /** TOC is meaningful only when two or more contracts are present. */
-    (_, input) =>
-      input.contracts.length >= 2
-        ? pass
-        : err({ tag: 'InsufficientContracts' as const }),
-  ],
-  transition: (lines, input) => {
-    const { contracts, messages } = input;
-    const result = [...lines];
-    result.push(`## ${messages.toc.title}`);
-    result.push('');
+export const renderToc = define<readonly string[], TocInput, RenderError>(
+  'render.toc',
+  {
+    pre: [
+      guard(
+        'TOC is meaningful only when two or more contracts are present',
+        (_, input) =>
+          input.contracts.length >= 2
+            ? pass
+            : err({ tag: 'InsufficientContracts' as const })
+      ),
+    ],
+    transition: (lines, input) => {
+      const { contracts, messages } = input;
+      const result = [...lines];
+      result.push(`## ${messages.toc.title}`);
+      result.push('');
 
-    for (const linked of contracts) {
-      const { contract } = linked;
-      const firstLine = contract.description?.split('\n')[0]?.trim();
-      const testCount = linked.testSuite?.tests.length ?? 0;
-      const guardCount = contract.guards.length;
+      for (const linked of contracts) {
+        const { contract } = linked;
+        const firstLine = contract.description?.split('\n')[0]?.trim();
+        const testCount = linked.testSuite?.tests.length ?? 0;
+        const guardCount = contract.guards.length;
 
-      const label = firstLine
-        ? `**${contract.id}** - ${firstLine}`
-        : `**${contract.id}**`;
-      const meta = messages.toc.meta(guardCount, testCount);
+        const label = firstLine
+          ? `**${contract.name}** - ${firstLine}`
+          : `**${contract.name}**`;
+        const meta = messages.toc.meta(guardCount, testCount);
 
-      result.push(`- ${label} （${meta}）`);
-    }
+        result.push(`- ${label} （${meta}）`);
+      }
 
-    result.push('');
-    return result;
-  },
-  post: [
-    /** Rendering TOC appends lines to the existing output. */
-    (before, after) => after.length > before.length,
-  ],
-});
+      result.push('');
+      return result;
+    },
+    post: [
+      check(
+        'rendering TOC appends lines to the existing output',
+        (before, after) => after.length > before.length
+      ),
+    ],
+  }
+);
 
 // === render.scenarioSection ===
 
@@ -93,12 +103,13 @@ export const renderScenarios = define<
   readonly string[],
   ScenarioSectionInput,
   RenderError
->({
-  id: 'render.scenarioSection',
+>('render.scenarioSection', {
   pre: [
-    /** Scenario section requires at least one parsed scenario. */
-    (_, input) =>
-      input.scenarios.length > 0 ? pass : err({ tag: 'NoScenarios' as const }),
+    guard(
+      'scenario section requires at least one parsed scenario',
+      (_, input) =>
+        input.scenarios.length > 0 ? pass : err({ tag: 'NoScenarios' as const })
+    ),
   ],
   transition: (lines, input) => [
     ...lines,
@@ -107,8 +118,10 @@ export const renderScenarios = define<
     }).split('\n'),
   ],
   post: [
-    /** Rendering scenario section appends lines to the existing output. */
-    (before, after) => after.length > before.length,
+    check(
+      'rendering scenario section appends lines to the existing output',
+      (before, after) => after.length > before.length
+    ),
   ],
 });
 
@@ -118,7 +131,7 @@ export function renderContractSections(
 ): readonly string[] {
   const { contracts, hasScenarios, messages, flowEnabled } = input;
   const sorted = [...contracts].sort((a, b) =>
-    a.contract.id.localeCompare(b.contract.id)
+    a.contract.name.localeCompare(b.contract.name)
   );
   const current = [...lines];
 
@@ -176,9 +189,7 @@ export function renderCoverageSection(
 export const renderMarkdownScenario = scenario<
   readonly string[],
   MarkdownInput
->({
-  id: 'render.markdown',
-  description: 'Markdown ドキュメントの前半組み立て',
+>('render.markdown', {
   flow: (input) => {
     const steps = [];
 
@@ -200,7 +211,7 @@ export const renderMarkdownScenario = scenario<
     }
 
     const sorted = [...input.contracts].sort((a, b) =>
-      a.contract.id.localeCompare(b.contract.id)
+      a.contract.name.localeCompare(b.contract.name)
     );
     if (sorted.length > 1) {
       steps.push(

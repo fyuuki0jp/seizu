@@ -4,11 +4,11 @@ export function linkScenarios(
   scenarios: readonly ParsedScenario[],
   contracts: readonly ParsedContract[]
 ): LinkedScenario[] {
-  const contractById = new Map<string, ParsedContract>();
+  const contractByName = new Map<string, ParsedContract>();
   const contractByVar = new Map<string, ParsedContract>();
 
   for (const c of contracts) {
-    contractById.set(c.id, c);
+    contractByName.set(c.name, c);
     if (c.variableName) {
       contractByVar.set(c.variableName, c);
     }
@@ -19,7 +19,8 @@ export function linkScenarios(
     resolvedSteps: scenario.steps.map((step) => ({
       step,
       contract:
-        contractById.get(step.contractId) ?? contractByVar.get(step.contractId),
+        contractByName.get(step.contractName) ??
+        contractByVar.get(step.contractName),
     })),
   }));
 }

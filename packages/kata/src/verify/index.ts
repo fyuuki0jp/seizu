@@ -45,7 +45,7 @@ export function assertContractValid<TState, TInput, TError>(
       return `  [${violationLabel}] ${f.id}${detailsSuffix}`;
     });
     throw new Error(
-      `Contract "${contract.id}" has ${failures.length} violation(s):\n${messages.join('\n')}`
+      `Contract "${contract.name}" has ${failures.length} violation(s):\n${messages.join('\n')}`
     );
   }
 }

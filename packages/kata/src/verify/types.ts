@@ -21,7 +21,7 @@ export interface CheckResult {
 }
 
 export interface ContractResult {
-  readonly contractId: string;
+  readonly contractName: string;
   readonly checks: CheckResult[];
 }
 

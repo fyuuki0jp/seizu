@@ -39,7 +39,7 @@ export interface FlowSummary {
 
 export interface FlowArtifact {
   readonly ownerKind: FlowOwnerKind;
-  readonly ownerId: string;
+  readonly ownerName: string;
   readonly graph: FlowGraph;
   readonly mermaid: string;
   readonly hash: string;

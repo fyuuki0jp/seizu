@@ -9,23 +9,20 @@ function createSourceFile(code: string): ts.SourceFile {
 describe('parseScenarios', () => {
   test('parses a scenario with flow and steps', () => {
     const source = createSourceFile(`
-import { define, scenario, step } from 'kata';
+import { define, guard, scenario, step } from 'kata';
 
-const createCart = define<S, I, E>({
-  id: 'cart.create',
+const createCart = define<S, I, E>('cart.create', {
   pre: [],
   transition: (s) => s,
 });
 
-const addItem = define<S, I, E>({
-  id: 'cart.addItem',
+const addItem = define<S, I, E>('cart.addItem', {
   pre: [],
   transition: (s) => s,
 });
 
 /** 通常の購入フロー */
-const normalPurchase = scenario({
-  id: 'cart.normalPurchase',
+const normalPurchase = scenario('cart.normalPurchase', {
   flow: (input) => [
     step(createCart, { userId: 'alice' }),
     step(addItem, { itemId: 'apple', qty: 3, price: 1.5 }),
@@ -37,24 +34,23 @@ const normalPurchase = scenario({
     expect(scenarios).toHaveLength(1);
 
     const s = scenarios[0];
-    expect(s.id).toBe('cart.normalPurchase');
+    expect(s.name).toBe('cart.normalPurchase');
     expect(s.variableName).toBe('normalPurchase');
     expect(s.description).toBe('通常の購入フロー');
     expect(s.steps).toHaveLength(2);
 
     // Step 1: createCart resolved to cart.create via varMap
-    expect(s.steps[0].contractId).toBe('cart.create');
+    expect(s.steps[0].contractName).toBe('cart.create');
     expect(s.steps[0].inputLiteral).toContain('userId');
 
     // Step 2: addItem resolved to cart.addItem via varMap
-    expect(s.steps[1].contractId).toBe('cart.addItem');
+    expect(s.steps[1].contractName).toBe('cart.addItem');
     expect(s.steps[1].inputLiteral).toContain('apple');
   });
 
   test('parses flow with block body (return statement)', () => {
     const source = createSourceFile(`
-const s = scenario({
-  id: 'test.block',
+const s = scenario('test.block', {
   flow: (input) => {
     return [
       step(create, { data: 1 }),
@@ -66,38 +62,34 @@ const s = scenario({
     const scenarios = parseScenarios(source);
     expect(scenarios).toHaveLength(1);
     expect(scenarios[0].steps).toHaveLength(1);
-    expect(scenarios[0].steps[0].contractId).toBe('create');
+    expect(scenarios[0].steps[0].contractName).toBe('create');
   });
 
   test('parses multiple scenarios', () => {
     const source = createSourceFile(`
-const a = scenario({
-  id: 'flow.a',
+const a = scenario('flow.a', {
   flow: () => [],
 });
 
-const b = scenario({
-  id: 'flow.b',
+const b = scenario('flow.b', {
   flow: () => [],
 });
 `);
 
     const scenarios = parseScenarios(source);
     expect(scenarios).toHaveLength(2);
-    expect(scenarios[0].id).toBe('flow.a');
-    expect(scenarios[1].id).toBe('flow.b');
+    expect(scenarios[0].name).toBe('flow.a');
+    expect(scenarios[1].name).toBe('flow.b');
   });
 
-  test('resolves contract variable to id via define() in same file', () => {
+  test('resolves contract variable to name via define() in same file', () => {
     const source = createSourceFile(`
-const myContract = define<S, I, E>({
-  id: 'domain.action',
+const myContract = define<S, I, E>('domain.action', {
   pre: [],
   transition: (s) => s,
 });
 
-const s = scenario({
-  id: 'test.resolve',
+const s = scenario('test.resolve', {
   flow: () => [
     step(myContract, { data: 1 }),
   ],
@@ -105,13 +97,12 @@ const s = scenario({
 `);
 
     const scenarios = parseScenarios(source);
-    expect(scenarios[0].steps[0].contractId).toBe('domain.action');
+    expect(scenarios[0].steps[0].contractName).toBe('domain.action');
   });
 
   test('falls back to variable name when define() not found', () => {
     const source = createSourceFile(`
-const s = scenario({
-  id: 'test.fallback',
+const s = scenario('test.fallback', {
   flow: () => [
     step(unknownContract, { data: 1 }),
   ],
@@ -119,7 +110,7 @@ const s = scenario({
 `);
 
     const scenarios = parseScenarios(source);
-    expect(scenarios[0].steps[0].contractId).toBe('unknownContract');
+    expect(scenarios[0].steps[0].contractName).toBe('unknownContract');
   });
 
   test('returns empty for scenario() with no arguments', () => {
@@ -128,39 +119,33 @@ const s = scenario({
     expect(scenarios).toHaveLength(0);
   });
 
-  test('returns empty for scenario() with non-object argument', () => {
-    const source = createSourceFile(`const s = scenario('string');`);
+  test('returns empty for scenario() with non-string first argument', () => {
+    const source = createSourceFile(`const s = scenario({}, {});`);
     const scenarios = parseScenarios(source);
     expect(scenarios).toHaveLength(0);
   });
 
-  test('returns empty for scenario() without id property', () => {
-    const source = createSourceFile(`
-const s = scenario({
-  flow: () => [],
-});
-`);
+  test('returns empty for scenario() with only one argument', () => {
+    const source = createSourceFile(`const s = scenario('test');`);
     const scenarios = parseScenarios(source);
     expect(scenarios).toHaveLength(0);
   });
 
   test('handles step with non-identifier contract arg', () => {
     const source = createSourceFile(`
-const s = scenario({
-  id: 'test.propaccess',
+const s = scenario('test.propaccess', {
   flow: () => [
     step(contracts.create, { data: 1 }),
   ],
 });
 `);
     const scenarios = parseScenarios(source);
-    expect(scenarios[0].steps[0].contractId).toBe('contracts.create');
+    expect(scenarios[0].steps[0].contractName).toBe('contracts.create');
   });
 
   test('filters out non-step-call elements in flow array', () => {
     const source = createSourceFile(`
-const s = scenario({
-  id: 'test.filter',
+const s = scenario('test.filter', {
   flow: () => [
     someVariable,
     step(create, { data: 1 }),
@@ -169,13 +154,12 @@ const s = scenario({
 `);
     const scenarios = parseScenarios(source);
     expect(scenarios[0].steps).toHaveLength(1);
-    expect(scenarios[0].steps[0].contractId).toBe('create');
+    expect(scenarios[0].steps[0].contractName).toBe('create');
   });
 
   test('handles step with insufficient arguments', () => {
     const source = createSourceFile(`
-const s = scenario({
-  id: 'test.noargs',
+const s = scenario('test.noargs', {
   flow: () => [
     step(create),
   ],
@@ -187,8 +171,7 @@ const s = scenario({
 
   test('handles scenario without enclosing variable', () => {
     const source = createSourceFile(`
-export default scenario({
-  id: 'test.novar',
+export default scenario('test.novar', {
   flow: () => [],
 });
 `);
@@ -200,8 +183,7 @@ export default scenario({
 
   test('handles non-step function calls in flow array', () => {
     const source = createSourceFile(`
-const s = scenario({
-  id: 'test.otherfn',
+const s = scenario('test.otherfn', {
   flow: () => [
     otherFunction(create, {}),
   ],
@@ -213,9 +195,7 @@ const s = scenario({
 
   test('returns empty steps when no flow property', () => {
     const source = createSourceFile(`
-const s = scenario({
-  id: 'test.noflow',
-});
+const s = scenario('test.noflow', {});
 `);
     const scenarios = parseScenarios(source);
     expect(scenarios).toHaveLength(1);
@@ -224,8 +204,7 @@ const s = scenario({
 
   test('returns empty steps when flow is not an arrow function', () => {
     const source = createSourceFile(`
-const s = scenario({
-  id: 'test.notarrow',
+const s = scenario('test.notarrow', {
   flow: someVariable,
 });
 `);
@@ -236,20 +215,17 @@ const s = scenario({
 
   test('parses flow with imperative push pattern', () => {
     const source = createSourceFile(`
-const create = define<S, I, E>({
-  id: 'test.create',
+const create = define<S, I, E>('test.create', {
   pre: [],
   transition: (s) => s,
 });
 
-const update = define<S, I, E>({
-  id: 'test.update',
+const update = define<S, I, E>('test.update', {
   pre: [],
   transition: (s) => s,
 });
 
-const s = scenario({
-  id: 'test.push',
+const s = scenario('test.push', {
   flow: (input) => {
     const steps = [];
     steps.push(step(create, { data: 1 }));
@@ -262,26 +238,23 @@ const s = scenario({
     const scenarios = parseScenarios(source);
     expect(scenarios).toHaveLength(1);
     expect(scenarios[0].steps).toHaveLength(2);
-    expect(scenarios[0].steps[0].contractId).toBe('test.create');
-    expect(scenarios[0].steps[1].contractId).toBe('test.update');
+    expect(scenarios[0].steps[0].contractName).toBe('test.create');
+    expect(scenarios[0].steps[1].contractName).toBe('test.update');
   });
 
   test('parses flow with conditional push pattern', () => {
     const source = createSourceFile(`
-const create = define<S, I, E>({
-  id: 'test.create',
+const create = define<S, I, E>('test.create', {
   pre: [],
   transition: (s) => s,
 });
 
-const update = define<S, I, E>({
-  id: 'test.update',
+const update = define<S, I, E>('test.update', {
   pre: [],
   transition: (s) => s,
 });
 
-const s = scenario({
-  id: 'test.condpush',
+const s = scenario('test.condpush', {
   flow: (input) => {
     const steps = [];
     steps.push(step(create, { data: 1 }));
@@ -297,14 +270,13 @@ const s = scenario({
     expect(scenarios).toHaveLength(1);
     // Picks up both top-level and nested push calls
     expect(scenarios[0].steps).toHaveLength(2);
-    expect(scenarios[0].steps[0].contractId).toBe('test.create');
-    expect(scenarios[0].steps[1].contractId).toBe('test.update');
+    expect(scenarios[0].steps[0].contractName).toBe('test.create');
+    expect(scenarios[0].steps[1].contractName).toBe('test.update');
   });
 
   test('falls back to description property when no TSDoc', () => {
     const source = createSourceFile(`
-const s = scenario({
-  id: 'test.descprop',
+const s = scenario('test.descprop', {
   description: 'Inline description',
   flow: () => [],
 });
@@ -318,8 +290,7 @@ const s = scenario({
   test('prefers TSDoc over description property', () => {
     const source = createSourceFile(`
 /** TSDoc description */
-const s = scenario({
-  id: 'test.both',
+const s = scenario('test.both', {
   description: 'Inline description',
   flow: () => [],
 });
@@ -333,8 +304,7 @@ const s = scenario({
   test('parses @accepts tags from TSDoc in scenario', () => {
     const source = createSourceFile(`
 /** @accepts Users can purchase items */
-const s = scenario({
-  id: 'test.accepts',
+const s = scenario('test.accepts', {
   flow: () => [],
 });
 `);
@@ -346,8 +316,7 @@ const s = scenario({
 
   test('defaults accepts to empty array when not present', () => {
     const source = createSourceFile(`
-const s = scenario({
-  id: 'test.noacc',
+const s = scenario('test.noacc', {
   flow: () => [],
 });
 `);
@@ -359,8 +328,7 @@ const s = scenario({
 
   test('uses description property when no variable name', () => {
     const source = createSourceFile(`
-export default scenario({
-  id: 'test.novar',
+export default scenario('test.novar', {
   description: 'Default export description',
   flow: () => [],
 });

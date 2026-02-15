@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from 'vitest';
 import type { Contract } from '../../src/types';
+import { guard } from '../../src/types';
 
 const { verifyContractMock } = vi.hoisted(() => ({
   verifyContractMock: vi.fn(),
@@ -18,11 +19,17 @@ type Err = { readonly tag: string };
 
 function makeContract(): Contract<State, Input, Err> {
   const execute = (state: State) => ({ ok: true as const, value: state });
-  return Object.assign(execute, {
-    id: 'cart.addItem',
-    pre: [],
+  const contract = Object.assign(execute, {
+    pre: [
+      guard('always pass', () => ({ ok: true as const, value: undefined })),
+    ],
     transition: (state: State) => state,
   }) as Contract<State, Input, Err>;
+  Object.defineProperty(contract, 'name', {
+    value: 'cart.addItem',
+    configurable: true,
+  });
+  return contract;
 }
 
 describe('assertContractValid message formatting', () => {

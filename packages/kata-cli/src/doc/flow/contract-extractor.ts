@@ -12,7 +12,7 @@ interface ParseResult {
 export function extractContractFlow(
   obj: ts.ObjectLiteralExpression,
   sourceFile: ts.SourceFile,
-  ownerId: string
+  ownerName: string
 ): FlowArtifact {
   const builder = new FlowGraphBuilder();
   const start = builder.addNode('start', 'start');
@@ -81,7 +81,7 @@ export function extractContractFlow(
 
   builder.connectEntries(invariantEntries, ok);
 
-  return buildFlowArtifact('contract', ownerId, builder.build());
+  return buildFlowArtifact('contract', ownerName, builder.build());
 }
 
 function parseUnsupportedTransition(

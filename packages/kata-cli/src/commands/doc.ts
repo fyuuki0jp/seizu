@@ -141,7 +141,7 @@ export function registerDocCommand(cli: CAC): void {
             flowArtifacts = collectFlowArtifacts(result.value);
           } else {
             console.error(
-              `Pipeline failed at step ${result.error.stepIndex}: ${result.error.contractId}`
+              `Pipeline failed at step ${result.error.stepIndex}: ${result.error.contractName}`
             );
             process.exit(1);
             return;
@@ -225,7 +225,7 @@ function collectFlowArtifacts(state: DocPipelineState): FlowArtifact[] {
   return artifacts.sort((a, b) => {
     const ownerCmp = a.ownerKind.localeCompare(b.ownerKind);
     if (ownerCmp !== 0) return ownerCmp;
-    return a.ownerId.localeCompare(b.ownerId);
+    return a.ownerName.localeCompare(b.ownerName);
   });
 }
 

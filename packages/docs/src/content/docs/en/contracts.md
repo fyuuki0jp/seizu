@@ -11,9 +11,15 @@ description: Auto-generated contract documentation
 
 > Business workflows composed from multiple contract operations.
 
-### ドキュメント生成パイプライン
+### doc.generate
 
 > `doc.generate`
+
+### Acceptance Criteria
+
+> Business requirements that this contract fulfills.
+
+- ソースファイルからContract仕様書を自動生成できる
 
 | # | Operation | Input |
 |---|------|------|
@@ -55,9 +61,15 @@ flowchart TD
 | Error path count | 0 |
 | Unanalyzable count | 0 |
 
-### カバレッジ分析パイプライン
+### coverage.generate
 
 > `coverage.generate`
+
+### Acceptance Criteria
+
+> Business requirements that this contract fulfills.
+
+- テストカバレッジレポートを生成できる
 
 | # | Operation | Input |
 |---|------|------|
@@ -96,9 +108,15 @@ flowchart TD
 | Error path count | 0 |
 | Unanalyzable count | 0 |
 
-### Markdown ドキュメントの前半組み立て
+### render.markdown
 
 > `render.markdown`
+
+### Acceptance Criteria
+
+> Business requirements that this contract fulfills.
+
+- タイトル・シナリオ・目次をMarkdownとして組み立てられる
 
 | # | Operation | Input |
 |---|------|------|
@@ -161,6 +179,12 @@ flowchart TD
 
 ## doc.analyze
 
+### Acceptance Criteria
+
+> Business requirements that this contract fulfills.
+
+- テストカバレッジを分析してレポートを生成できる
+
 | Property | Type |
 |------|-----|
 | State | `DocPipelineState` |
@@ -214,7 +238,7 @@ _Not defined_
 
 | # | Condition |
 |---|------|
-| 1 | Coverage report is present when analysis is enabled |
+| 1 | coverage report is present when analysis is enabled |
 
 ### Invariants
 
@@ -240,6 +264,12 @@ _No errors defined_
 ---
 
 ## doc.filter
+
+### Acceptance Criteria
+
+> Business requirements that this contract fulfills.
+
+- 指定されたIDでContractをフィルタリングできる
 
 | Property | Type |
 |------|-----|
@@ -292,7 +322,7 @@ _Not defined_
 
 | # | Condition |
 |---|------|
-| 1 | Filtered contracts are a subset of all contracts |
+| 1 | filtered contracts are a subset of all contracts |
 
 ### Invariants
 
@@ -318,6 +348,12 @@ _No errors defined_
 ---
 
 ## doc.link
+
+### Acceptance Criteria
+
+> Business requirements that this contract fulfills.
+
+- Contractとテストスイートを紐付けできる
 
 | Property | Type |
 |------|-----|
@@ -369,7 +405,7 @@ _Not defined_
 
 | # | Condition |
 |---|------|
-| 1 | Every filtered contract has a corresponding linked entry |
+| 1 | every filtered contract has a corresponding linked entry |
 
 ### Invariants
 
@@ -394,13 +430,20 @@ _No errors defined_
 
 ## doc.parse
 
+### Acceptance Criteria
+
+> Business requirements that this contract fulfills.
+
+- ソースファイルからContract・Scenario・テストをパースできる
+- ソースファイルが未指定の場合はエラーを返す
+
 | Property | Type |
 |------|-----|
 | State | `DocPipelineState` |
 | Input | `ParseInput` |
 | Error | `PipelineError` |
 
-<!-- flow-hash: d6b549774871468f32c9f4e28358ae1e97fc57fe32dea87f596b3991096e752d -->
+<!-- flow-hash: 830484c959dd51c1fdcb6768098d786dca8f795cb337037991b06ca38afb6446 -->
 <details>
 <summary>Flowchart (Mermaid)</summary>
 
@@ -409,7 +452,7 @@ flowchart TD
   n1(["start"])
   n2(["ok"])
   n3{"pre.1"}
-  n4(["error: NoSourceFiles"])
+  n4(["error(pre.1)"])
   n5["transition"]
   n6["const contracts: ParsedContract[] = [];"]
   n7["const scenarios: ParsedScenario[] = [];"]
@@ -455,7 +498,7 @@ flowchart TD
 
 | # | Condition | Error |
 |---|------|--------|
-| 1 | Source files must not be empty | `NoSourceFiles` |
+| 1 | source files must not be empty | `NoSourceFiles` |
 
 ### Postconditions
 
@@ -463,7 +506,7 @@ flowchart TD
 
 | # | Condition |
 |---|------|
-| 1 | Source file paths are tracked uniquely in the pipeline state. |
+| 1 | source file paths are tracked uniquely |
 
 ### Invariants
 
@@ -493,6 +536,12 @@ _Not defined_
 ---
 
 ## doc.render
+
+### Acceptance Criteria
+
+> Business requirements that this contract fulfills.
+
+- パイプライン状態からMarkdownドキュメントを生成できる
 
 | Property | Type |
 |------|-----|
@@ -555,7 +604,7 @@ _Not defined_
 
 | # | Condition |
 |---|------|
-| 1 | Non-empty linked state produces non-empty markdown |
+| 1 | non-empty linked state produces non-empty markdown |
 
 ### Invariants
 
@@ -581,13 +630,19 @@ _No errors defined_
 
 ## render.scenarioSection
 
+### Acceptance Criteria
+
+> Business requirements that this contract fulfills.
+
+- シナリオセクションをレンダリングできる
+
 | Property | Type |
 |------|-----|
 | State | `readonly string[]` |
 | Input | `ScenarioSectionInput` |
 | Error | `RenderError` |
 
-<!-- flow-hash: c7b1e7f43bc620aa63d105b6c41c9093b8c2d2699370dc2e451b51c3876fc278 -->
+<!-- flow-hash: a7152ea511f01617154c84c8a2352409663426f0768c425e1181c0a402f2e7fb -->
 <details>
 <summary>Flowchart (Mermaid)</summary>
 
@@ -596,7 +651,7 @@ flowchart TD
   n1(["start"])
   n2(["ok"])
   n3{"pre.1"}
-  n4(["error: NoScenarios"])
+  n4(["error(pre.1)"])
   n5["transition"]
   n6["return [ ...lines, ...renderScenarioSection(input.scenarios, input.m..."]
   n7["post.1"]
@@ -625,7 +680,7 @@ flowchart TD
 
 | # | Condition | Error |
 |---|------|--------|
-| 1 | Scenario section requires at least one parsed scenario. | `NoScenarios` |
+| 1 | scenario section requires at least one parsed scenario | `NoScenarios` |
 
 ### Postconditions
 
@@ -633,7 +688,7 @@ flowchart TD
 
 | # | Condition |
 |---|------|
-| 1 | Rendering scenario section appends lines to the existing output. |
+| 1 | rendering scenario section appends lines to the existing output |
 
 ### Invariants
 
@@ -660,13 +715,19 @@ _Not defined_
 
 ## render.title
 
+### Acceptance Criteria
+
+> Business requirements that this contract fulfills.
+
+- ドキュメントのタイトルと説明をレンダリングできる
+
 | Property | Type |
 |------|-----|
 | State | `readonly string[]` |
 | Input | `TitleInput` |
 | Error | `RenderError` |
 
-<!-- flow-hash: 83c828d53c57431d9da7985f7fd7e8a106685ab8e72a77642ca974149cee3bb4 -->
+<!-- flow-hash: 754aa1b5d9622b61e90d3f9cabb9b3350e30191690587365dddec4a4b51af881 -->
 <details>
 <summary>Flowchart (Mermaid)</summary>
 
@@ -675,7 +736,7 @@ flowchart TD
   n1(["start"])
   n2(["ok"])
   n3{"pre.1"}
-  n4(["error: TitleEmpty"])
+  n4(["error(pre.1)"])
   n5["transition"]
   n6["const result = [...lines, `# ${input.title}`, ''];"]
   n7{"if input.description"}
@@ -711,7 +772,7 @@ flowchart TD
 
 | # | Condition | Error |
 |---|------|--------|
-| 1 | Document title must not be empty. | `TitleEmpty` |
+| 1 | document title must not be empty | `TitleEmpty` |
 
 ### Postconditions
 
@@ -719,7 +780,7 @@ flowchart TD
 
 | # | Condition |
 |---|------|
-| 1 | Rendering a title always appends new lines. |
+| 1 | rendering a title always appends new lines |
 
 ### Invariants
 
@@ -747,13 +808,19 @@ _Not defined_
 
 ## render.toc
 
+### Acceptance Criteria
+
+> Business requirements that this contract fulfills.
+
+- 2つ以上のContractがある場合に目次を生成できる
+
 | Property | Type |
 |------|-----|
 | State | `readonly string[]` |
 | Input | `TocInput` |
 | Error | `RenderError` |
 
-<!-- flow-hash: 16369dd201036ae39236b0136501a4e3c70d0f7c1e93482c0b516355972197d8 -->
+<!-- flow-hash: 014093b35e091bd2cd123cb3f6460e4c5e07fbd14475e0aa94709ee35cad75a4 -->
 <details>
 <summary>Flowchart (Mermaid)</summary>
 
@@ -762,7 +829,7 @@ flowchart TD
   n1(["start"])
   n2(["ok"])
   n3{"pre.1"}
-  n4(["error: InsufficientContracts"])
+  n4(["error(pre.1)"])
   n5["transition"]
   n6["const { contracts, messages } = input;"]
   n7["const result = [...lines];"]
@@ -773,7 +840,7 @@ flowchart TD
   n12["const firstLine = contract.description?.split('\\n')[0]?.trim();"]
   n13["const testCount = linked.testSuite?.tests.length ?? 0;"]
   n14["const guardCount = contract.guards.length;"]
-  n15["const label = firstLine ? `**${contract.id}** - ${firstLine}`..."]
+  n15["const label = firstLine ? `**${contract.name}** - ${firstLine..."]
   n16["const meta = messages.toc.meta(guardCount, testCount);"]
   n17["result.push(`- ${label} （${meta}）`);"]
   n18["result.push('');"]
@@ -818,7 +885,7 @@ flowchart TD
 
 | # | Condition | Error |
 |---|------|--------|
-| 1 | TOC is meaningful only when two or more contracts are present. | `InsufficientContracts` |
+| 1 | TOC is meaningful only when two or more contracts are present | `InsufficientContracts` |
 
 ### Postconditions
 
@@ -826,7 +893,7 @@ flowchart TD
 
 | # | Condition |
 |---|------|
-| 1 | Rendering TOC appends lines to the existing output. |
+| 1 | rendering TOC appends lines to the existing output |
 
 ### Invariants
 
@@ -854,13 +921,19 @@ _Not defined_
 
 ## report.replay
 
+### Acceptance Criteria
+
+> Business requirements that this contract fulfills.
+
+- 失敗したPBT検証のリプレイコマンドを生成できる
+
 | Property | Type |
 |------|-----|
 | State | `string` |
 | Input | `ReporterInput` |
 | Error | `ReporterError` |
 
-<!-- flow-hash: d47af9155b438b11d68a4c285a94150400c6349fb5699b66b8f45dd117efd881 -->
+<!-- flow-hash: bfe9749c6cef33bc00c7c7260ec1e97efae5e707b9433a56ef908517c4c64f3f -->
 <details>
 <summary>Flowchart (Mermaid)</summary>
 
@@ -869,7 +942,7 @@ flowchart TD
   n1(["start"])
   n2(["ok"])
   n3{"pre.1"}
-  n4(["error: NoFailures"])
+  n4(["error(pre.1)"])
   n5["transition"]
   n6["return replay(input.result)"]
   n7["post.1"]
@@ -900,7 +973,7 @@ flowchart TD
 
 | # | Condition | Error |
 |---|------|--------|
-| 1 | Must have at least one failure to generate replay | `NoFailures` |
+| 1 | must have at least one failure to generate replay | `NoFailures` |
 
 ### Postconditions
 
@@ -908,7 +981,7 @@ flowchart TD
 
 | # | Condition |
 |---|------|
-| 1 | Output is non-empty |
+| 1 | output is non-empty |
 
 ### Invariants
 
@@ -916,7 +989,7 @@ flowchart TD
 
 | # | Condition |
 |---|------|
-| 1 | Output is always a string |
+| 1 | output is always a string |
 
 ### Error Catalog
 
@@ -939,13 +1012,19 @@ flowchart TD
 
 ## report.summary
 
+### Acceptance Criteria
+
+> Business requirements that this contract fulfills.
+
+- PBT検証結果のサマリーレポートを生成できる
+
 | Property | Type |
 |------|-----|
 | State | `string` |
 | Input | `ReporterInput` |
 | Error | `ReporterError` |
 
-<!-- flow-hash: bc3405c86a23f1da2a7409da623a194c92ea129b0dfac44e3227a043c82106f8 -->
+<!-- flow-hash: dc24903e89b1cfeaaa41b000bc2d65265126f95340f36a6a313f6ee66716036d -->
 <details>
 <summary>Flowchart (Mermaid)</summary>
 
@@ -954,7 +1033,7 @@ flowchart TD
   n1(["start"])
   n2(["ok"])
   n3{"pre.1"}
-  n4(["error: NoResults"])
+  n4(["error(pre.1)"])
   n5["transition"]
   n6["return summary(input.result)"]
   n7["post.1"]
@@ -985,7 +1064,7 @@ flowchart TD
 
 | # | Condition | Error |
 |---|------|--------|
-| 1 | Verification results must not be empty | `NoResults` |
+| 1 | verification results must not be empty | `NoResults` |
 
 ### Postconditions
 
@@ -993,7 +1072,7 @@ flowchart TD
 
 | # | Condition |
 |---|------|
-| 1 | Output contains kata-verify header |
+| 1 | output contains kata-verify header |
 
 ### Invariants
 
@@ -1001,7 +1080,7 @@ flowchart TD
 
 | # | Condition |
 |---|------|
-| 1 | Output is always a string |
+| 1 | output is always a string |
 
 ### Error Catalog
 

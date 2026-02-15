@@ -18,7 +18,7 @@ export function formatCoverageReport(
         ? `${contract.coveredErrorTags}/${contract.totalErrorTags}`
         : '-';
     lines.push(
-      `  ${contract.contractId}  [${status}]  tests: ${contract.testCount}  errors: ${errorCov}`
+      `  ${contract.contractName}  [${status}]  tests: ${contract.testCount}  errors: ${errorCov}`
     );
   }
 

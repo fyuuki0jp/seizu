@@ -12,7 +12,7 @@ interface ParseResult {
 export function extractScenarioFlow(
   obj: ts.ObjectLiteralExpression,
   sourceFile: ts.SourceFile,
-  ownerId: string,
+  ownerName: string,
   contractVarMap: ReadonlyMap<string, string>
 ): FlowArtifact {
   const builder = new FlowGraphBuilder();
@@ -22,7 +22,7 @@ export function extractScenarioFlow(
   const flowFn = findArrowFunctionProperty(obj, 'flow');
   if (!flowFn) {
     builder.addEdge(start, end);
-    return buildFlowArtifact('scenario', ownerId, builder.build());
+    return buildFlowArtifact('scenario', ownerName, builder.build());
   }
 
   const entries: EntryPoint[] = [{ nodeId: start }];
@@ -45,7 +45,7 @@ export function extractScenarioFlow(
     builder.connectEntries(exits, end);
   }
 
-  return buildFlowArtifact('scenario', ownerId, builder.build());
+  return buildFlowArtifact('scenario', ownerName, builder.build());
 }
 
 function parseUnsupportedBody(
@@ -406,11 +406,11 @@ function stepLabel(
   }
 
   const contractArg = call.arguments[0];
-  const contractId = ts.isIdentifier(contractArg)
+  const contractName = ts.isIdentifier(contractArg)
     ? (contractVarMap.get(contractArg.text) ?? contractArg.text)
     : contractArg.getText(sourceFile);
 
-  return `step ${contractId}`;
+  return `step ${contractName}`;
 }
 
 function loopLabel(

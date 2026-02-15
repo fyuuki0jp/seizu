@@ -33,7 +33,7 @@ export interface ParsedInvariant {
 }
 
 export interface ParsedContract {
-  readonly id: string;
+  readonly name: string;
   readonly accepts: readonly string[];
   readonly description: string | undefined;
   readonly typeInfo: ParsedTypeInfo;
@@ -58,7 +58,7 @@ export interface ParsedTestCase {
 }
 
 export interface ParsedTestSuite {
-  readonly contractId: string;
+  readonly contractName: string;
   readonly tests: readonly ParsedTestCase[];
   readonly sourceFile: string;
 }
@@ -67,12 +67,12 @@ export interface ParsedTestSuite {
 
 export interface ParsedScenarioStep {
   readonly index: number;
-  readonly contractId: string;
+  readonly contractName: string;
   readonly inputLiteral: string;
 }
 
 export interface ParsedScenario {
-  readonly id: string;
+  readonly name: string;
   readonly accepts: readonly string[];
   readonly description: string | undefined;
   readonly variableName: string | undefined;

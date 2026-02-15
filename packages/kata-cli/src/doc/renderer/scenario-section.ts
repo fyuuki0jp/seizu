@@ -34,10 +34,10 @@ export function renderScenarioSection(
     if (firstLine) {
       lines.push(`### ${firstLine}`);
     } else {
-      lines.push(`### ${scenario.id}`);
+      lines.push(`### ${scenario.name}`);
     }
     lines.push('');
-    lines.push(`> \`${scenario.id}\``);
+    lines.push(`> \`${scenario.name}\``);
     lines.push('');
 
     if (scenario.accepts.length > 0) {
@@ -49,7 +49,7 @@ export function renderScenarioSection(
 
     for (const { step } of linked.resolvedSteps) {
       const num = step.index + 1;
-      const operation = `\`${step.contractId}\``;
+      const operation = `\`${step.contractName}\``;
       const input = formatInput(step.inputLiteral);
       lines.push(`| ${num} | ${operation} | ${input} |`);
     }

@@ -41,7 +41,7 @@ function parseDescribeBlock(
   const labelArg = call.arguments[0];
   if (!ts.isStringLiteral(labelArg)) return undefined;
 
-  const contractId = labelArg.text;
+  const contractName = labelArg.text;
   const callback = call.arguments[1];
 
   if (!ts.isArrowFunction(callback) && !ts.isFunctionExpression(callback)) {
@@ -51,7 +51,7 @@ function parseDescribeBlock(
   const tests = extractTestCases(callback.body, sourceFile);
 
   return {
-    contractId,
+    contractName,
     tests,
     sourceFile: sourceFile.fileName,
   };

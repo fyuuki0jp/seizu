@@ -18,7 +18,7 @@ function makeContractResult(
   overrides: Partial<ContractResult> = {}
 ): ContractResult {
   return {
-    contractId: 'cart.addItem',
+    contractName: 'cart.addItem',
     checks: [makeCheck()],
     ...overrides,
   };
@@ -39,7 +39,7 @@ describe('json reporter', () => {
     const output = json(result);
     const parsed = JSON.parse(output);
     expect(parsed.success).toBe(true);
-    expect(parsed.results[0].contractId).toBe('cart.addItem');
+    expect(parsed.results[0].contractName).toBe('cart.addItem');
   });
 });
 

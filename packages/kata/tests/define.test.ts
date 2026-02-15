@@ -3,6 +3,7 @@ import { define } from '../src/define';
 import type { Result } from '../src/result';
 import { err, pass } from '../src/result';
 import { expectErr, expectOk } from '../src/testing';
+import { guard } from '../src/types';
 
 type State = { value: number };
 type Input = { amount: number };
@@ -10,9 +11,12 @@ type Err = { tag: string };
 
 describe('define', () => {
   test('returns ok when all guards pass', () => {
-    const contract = define<State, Input, Err>({
-      id: 'test.add',
-      pre: [(_s, i) => (i.amount > 0 ? pass : err({ tag: 'NotPositive' }))],
+    const contract = define<State, Input, Err>('test.add', {
+      pre: [
+        guard('positive', (_s, i) =>
+          i.amount > 0 ? pass : err({ tag: 'NotPositive' })
+        ),
+      ],
       transition: (state, input) => ({ value: state.value + input.amount }),
     });
 
@@ -21,11 +25,14 @@ describe('define', () => {
   });
 
   test('returns err when first guard fails', () => {
-    const contract = define<State, Input, Err>({
-      id: 'test.add',
+    const contract = define<State, Input, Err>('test.add', {
       pre: [
-        (_s, i) => (i.amount > 0 ? pass : err({ tag: 'NotPositive' })),
-        (_s, i) => (i.amount <= 100 ? pass : err({ tag: 'OverLimit' })),
+        guard('positive', (_s, i) =>
+          i.amount > 0 ? pass : err({ tag: 'NotPositive' })
+        ),
+        guard('under limit', (_s, i) =>
+          i.amount <= 100 ? pass : err({ tag: 'OverLimit' })
+        ),
       ],
       transition: (state, input) => ({ value: state.value + input.amount }),
     });
@@ -35,12 +42,20 @@ describe('define', () => {
   });
 
   test('returns err from second guard with short-circuit evaluation', () => {
-    const firstGuard = vi.fn((): Result<void, Err> => pass);
-    const secondGuard = vi.fn((): Result<void, Err> => err({ tag: 'Second' }));
-    const thirdGuard = vi.fn((): Result<void, Err> => pass);
+    const firstGuard = guard(
+      'first',
+      vi.fn((): Result<void, Err> => pass)
+    );
+    const secondGuard = guard(
+      'second',
+      vi.fn((): Result<void, Err> => err({ tag: 'Second' }))
+    );
+    const thirdGuard = guard(
+      'third',
+      vi.fn((): Result<void, Err> => pass)
+    );
 
-    const contract = define<State, Input, Err>({
-      id: 'test.shortcircuit',
+    const contract = define<State, Input, Err>('test.shortcircuit', {
       pre: [firstGuard, secondGuard, thirdGuard],
       transition: (state) => state,
     });
@@ -48,14 +63,13 @@ describe('define', () => {
     const error = expectErr(contract({ value: 0 }, { amount: 0 }));
     expect(error).toEqual({ tag: 'Second' });
 
-    expect(firstGuard).toHaveBeenCalledOnce();
-    expect(secondGuard).toHaveBeenCalledOnce();
-    expect(thirdGuard).not.toHaveBeenCalled();
+    expect(firstGuard.fn).toHaveBeenCalledOnce();
+    expect(secondGuard.fn).toHaveBeenCalledOnce();
+    expect(thirdGuard.fn).not.toHaveBeenCalled();
   });
 
   test('returns ok when guard array is empty', () => {
-    const contract = define<State, Input, Err>({
-      id: 'test.noguards',
+    const contract = define<State, Input, Err>('test.noguards', {
       pre: [],
       transition: (state, input) => ({ value: state.value + input.amount }),
     });
@@ -65,8 +79,7 @@ describe('define', () => {
   });
 
   test('is callable as a function', () => {
-    const contract = define<State, Input, Err>({
-      id: 'test.callable',
+    const contract = define<State, Input, Err>('test.callable', {
       pre: [],
       transition: (state, input) => ({ value: state.value + input.amount }),
     });
@@ -76,19 +89,18 @@ describe('define', () => {
   });
 
   test('exposes contract metadata via property access', () => {
-    const pre = [(): Result<void, Err> => pass];
-    const post = [() => true];
-    const inv = [() => true];
+    const pre = [guard('always pass', (): Result<void, Err> => pass)];
+    const post = [{ label: 'always true', fn: () => true }];
+    const inv = [{ label: 'always true', fn: () => true }];
 
-    const contract = define<State, Input, Err>({
-      id: 'test.metadata',
+    const contract = define<State, Input, Err>('test.metadata', {
       pre,
       transition: (state) => state,
       post,
       invariant: inv,
     });
 
-    expect(contract.id).toBe('test.metadata');
+    expect(contract.name).toBe('test.metadata');
     expect(contract.pre).toBe(pre);
     expect(contract.post).toBe(post);
     expect(contract.invariant).toBe(inv);
@@ -103,12 +115,11 @@ describe('define', () => {
       throw new Error('invariant should not be called');
     });
 
-    const contract = define<State, Input, Err>({
-      id: 'test.no-runtime-eval',
+    const contract = define<State, Input, Err>('test.no-runtime-eval', {
       pre: [],
       transition: (state, input) => ({ value: state.value + input.amount }),
-      post: [postCheck],
-      invariant: [invariantCheck],
+      post: [{ label: 'post', fn: postCheck }],
+      invariant: [{ label: 'inv', fn: invariantCheck }],
     });
 
     expectOk(contract({ value: 1 }, { amount: 2 }));
@@ -117,17 +128,20 @@ describe('define', () => {
   });
 
   test('guard error can use state and input', () => {
-    const contract = define<State, Input, { tag: string; detail: string }>({
-      id: 'test.error-args',
-      pre: [
-        (state, input) =>
-          err({
-            tag: 'Failed',
-            detail: `state=${state.value},input=${input.amount}`,
-          }),
-      ],
-      transition: (state) => state,
-    });
+    const contract = define<State, Input, { tag: string; detail: string }>(
+      'test.error-args',
+      {
+        pre: [
+          guard('always fail', (state, input) =>
+            err({
+              tag: 'Failed',
+              detail: `state=${state.value},input=${input.amount}`,
+            })
+          ),
+        ],
+        transition: (state) => state,
+      }
+    );
 
     const error = expectErr(contract({ value: 42 }, { amount: 7 }));
     expect(error.detail).toBe('state=42,input=7');

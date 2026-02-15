@@ -4,7 +4,7 @@ import type { Contract } from './types';
 
 export interface ScenarioFailure {
   readonly stepIndex: number;
-  readonly contractId: string;
+  readonly contractName: string;
   readonly error: unknown;
 }
 
@@ -26,8 +26,7 @@ export function step<TState, TInput, TError>(
 type AnyStep<TState> = StepDef<TState, unknown, unknown>;
 
 export interface ScenarioDef<TState, TInput> {
-  readonly id: string;
-  readonly description?: string;
+  readonly name: string;
   readonly flow: (input: TInput) => ReadonlyArray<AnyStep<TState>>;
 }
 
@@ -38,8 +37,10 @@ export type Scenario<TState, TInput> = ((
   ScenarioDef<TState, TInput>;
 
 export function scenario<TState, TInput>(
-  def: ScenarioDef<TState, TInput>
+  name: string,
+  body: Omit<ScenarioDef<TState, TInput>, 'name'>
 ): Scenario<TState, TInput> {
+  const def = { name, ...body };
   const execute = (
     state: TState,
     input: TInput
@@ -53,7 +54,7 @@ export function scenario<TState, TInput>(
       if (!result.ok) {
         return err({
           stepIndex: i,
-          contractId: s.contract.id,
+          contractName: s.contract.name,
           error: result.error,
         });
       }
@@ -63,5 +64,9 @@ export function scenario<TState, TInput>(
     return ok(currentState);
   };
 
-  return Object.assign(execute, def);
+  Object.defineProperty(execute, 'name', {
+    value: name,
+    configurable: true,
+  });
+  return Object.assign(execute, body) as Scenario<TState, TInput>;
 }

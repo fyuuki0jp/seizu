@@ -65,15 +65,15 @@ function verifyPreGuard(
   path?: string
 ): CheckResult {
   const { contract, state: stateArb, input: inputArb } = entry;
-  const guard = contract.pre[guardIndex];
-  const guardName = guard.name || `pre[${guardIndex}]`;
+  const g = contract.pre[guardIndex];
+  const guardId = g.label;
 
   const details = fc.check(
     fc.property(
       stateArb as fc.Arbitrary<unknown>,
       inputArb as fc.Arbitrary<unknown>,
       (state, input) => {
-        const guardResult = guard(state, input);
+        const guardResult = g.fn(state, input);
         if (!guardResult.ok) {
           const contractResult = contract(state, input);
           return !isOk(contractResult);
@@ -85,11 +85,11 @@ function verifyPreGuard(
   );
 
   if (details.failed) {
-    return extractFailure(guardName, 'pre', 'pre_not_guarded', details);
+    return extractFailure(guardId, 'pre', 'pre_not_guarded', details);
   }
 
   return {
-    id: guardName,
+    id: guardId,
     kind: 'pre',
     status: 'passed',
     runs: details.numRuns,
@@ -109,31 +109,31 @@ function verifyPostCondition(
     return { id: 'unknown', kind: 'post', status: 'passed', runs: 0 };
   }
 
-  const condName = condition.name || `post[${conditionIndex}]`;
+  const condId = condition.label;
 
   const details = fc.check(
     fc.property(
       stateArb as fc.Arbitrary<unknown>,
       inputArb as fc.Arbitrary<unknown>,
       (state, input) => {
-        const allPrePass = contract.pre.every((g) => isOk(g(state, input)));
+        const allPrePass = contract.pre.every((g) => isOk(g.fn(state, input)));
         if (!allPrePass) return true;
 
         const result = contract(state, input);
         if (!isOk(result)) return true;
 
-        return condition(state, result.value, input);
+        return condition.fn(state, result.value, input);
       }
     ),
     buildFcParams(numRuns, seed, path)
   );
 
   if (details.failed) {
-    return extractFailure(condName, 'post', 'postcondition_failed', details);
+    return extractFailure(condId, 'post', 'postcondition_failed', details);
   }
 
   return {
-    id: condName,
+    id: condId,
     kind: 'post',
     status: 'passed',
     runs: details.numRuns,
@@ -153,31 +153,31 @@ function verifyInvariant(
     return { id: 'unknown', kind: 'invariant', status: 'passed', runs: 0 };
   }
 
-  const invName = inv.name || `invariant[${invariantIndex}]`;
+  const invId = inv.label;
 
   const details = fc.check(
     fc.property(
       stateArb as fc.Arbitrary<unknown>,
       inputArb as fc.Arbitrary<unknown>,
       (state, input) => {
-        const allPrePass = contract.pre.every((g) => isOk(g(state, input)));
+        const allPrePass = contract.pre.every((g) => isOk(g.fn(state, input)));
         if (!allPrePass) return true;
 
         const result = contract(state, input);
         if (!isOk(result)) return true;
 
-        return inv(result.value);
+        return inv.fn(result.value);
       }
     ),
     buildFcParams(numRuns, seed, path)
   );
 
   if (details.failed) {
-    return extractFailure(invName, 'invariant', 'invariant_failed', details);
+    return extractFailure(invId, 'invariant', 'invariant_failed', details);
   }
 
   return {
-    id: invName,
+    id: invId,
     kind: 'invariant',
     status: 'passed',
     runs: details.numRuns,
@@ -197,7 +197,7 @@ function verifyGuardConsistency(
       stateArb as fc.Arbitrary<unknown>,
       inputArb as fc.Arbitrary<unknown>,
       (state, input) => {
-        const allPrePass = contract.pre.every((g) => isOk(g(state, input)));
+        const allPrePass = contract.pre.every((g) => isOk(g.fn(state, input)));
         if (!allPrePass) return true;
 
         const result = contract(state, input);
@@ -209,7 +209,7 @@ function verifyGuardConsistency(
 
   if (details.failed) {
     return extractFailure(
-      `${contract.id}.consistency`,
+      `${contract.name}.consistency`,
       'consistency',
       'unexpected_error',
       details
@@ -217,7 +217,7 @@ function verifyGuardConsistency(
   }
 
   return {
-    id: `${contract.id}.consistency`,
+    id: `${contract.name}.consistency`,
     kind: 'consistency',
     status: 'passed',
     runs: details.numRuns,
@@ -257,7 +257,7 @@ export function verifyContract(
     verifyGuardConsistency(entry, numRuns, options?.seed, options?.path)
   );
 
-  return { contractId: entry.contract.id, checks };
+  return { contractName: entry.contract.name, checks };
 }
 
 export function verify(

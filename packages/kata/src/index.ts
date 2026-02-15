@@ -27,3 +27,4 @@ export type {
   Guard,
   Invariant,
 } from './types';
+export { check, ensure, guard } from './types';

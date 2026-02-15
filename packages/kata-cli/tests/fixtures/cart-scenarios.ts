@@ -1,5 +1,5 @@
 // Fixture: Scenario definitions composing cart contracts
-import { define, err, pass, scenario, step } from 'kata';
+import { define, err, guard, pass, scenario, step } from 'kata';
 
 type CartItem = { readonly qty: number; readonly price: number };
 type CartState = {
@@ -14,24 +14,32 @@ type DuplicateItem = {
   readonly itemId: string;
 };
 
-const createCart = define<CartState, { userId: string }, AlreadyExists>({
-  id: 'cart.create',
-  pre: [(s) => (!s.exists ? pass : err({ tag: 'AlreadyExists' as const }))],
-  transition: (state) => ({ ...state, exists: true }),
-});
+const createCart = define<CartState, { userId: string }, AlreadyExists>(
+  'cart.create',
+  {
+    pre: [
+      guard('カートがまだ存在していないこと', (s) =>
+        !s.exists ? pass : err({ tag: 'AlreadyExists' as const })
+      ),
+    ],
+    transition: (state) => ({ ...state, exists: true }),
+  }
+);
 
 const addItem = define<
   CartState,
   { itemId: string; qty: number; price: number },
   CartNotFound | DuplicateItem
->({
-  id: 'cart.addItem',
+>('cart.addItem', {
   pre: [
-    (s) => (s.exists ? pass : err({ tag: 'CartNotFound' as const })),
-    (s, i) =>
+    guard('カートが存在していること', (s) =>
+      s.exists ? pass : err({ tag: 'CartNotFound' as const })
+    ),
+    guard('同じアイテムが既にカートに存在していないこと', (s, i) =>
       !s.items.has(i.itemId)
         ? pass
-        : err({ tag: 'DuplicateItem' as const, itemId: i.itemId }),
+        : err({ tag: 'DuplicateItem' as const, itemId: i.itemId })
+    ),
   ],
   transition: (state, input) => ({
     ...state,
@@ -47,22 +55,24 @@ const addItem = define<
  *
  * @accepts ユーザーは複数のアイテムをカートに入れて購入できる
  */
-export const normalPurchase = scenario({
-  id: 'cart.normalPurchase',
-  description: '通常の購入フロー',
-  flow: (input: { userId: string }) => [
-    step(createCart, { userId: input.userId }),
-    step(addItem, { itemId: 'apple', qty: 3, price: 1.5 }),
-    step(addItem, { itemId: 'banana', qty: 1, price: 0.8 }),
-  ],
-});
+export const normalPurchase = scenario<CartState, { userId: string }>(
+  'cart.normalPurchase',
+  {
+    flow: (input) => [
+      step(createCart, { userId: input.userId }),
+      step(addItem, { itemId: 'apple', qty: 3, price: 1.5 }),
+      step(addItem, { itemId: 'banana', qty: 1, price: 0.8 }),
+    ],
+  }
+);
 
 /** 重複カート作成の検出 */
-export const duplicateCartError = scenario({
-  id: 'cart.duplicateCreate',
-  description: '重複カート作成の検出',
-  flow: (input: { userId: string }) => [
-    step(createCart, { userId: input.userId }),
-    step(createCart, { userId: input.userId }),
-  ],
-});
+export const duplicateCartError = scenario<CartState, { userId: string }>(
+  'cart.duplicateCreate',
+  {
+    flow: (input) => [
+      step(createCart, { userId: input.userId }),
+      step(createCart, { userId: input.userId }),
+    ],
+  }
+);

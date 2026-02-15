@@ -103,12 +103,12 @@ function makeOptions(
 function makeEntries() {
   return [
     {
-      contract: { id: 'cart.create' },
+      contract: { name: 'cart.create' },
       state: {},
       input: {},
     },
     {
-      contract: { id: 'cart.addItem' },
+      contract: { name: 'cart.addItem' },
       state: {},
       input: {},
     },

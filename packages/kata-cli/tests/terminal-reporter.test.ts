@@ -10,7 +10,7 @@ describe('formatCoverageReport', () => {
   const report: CoverageReport = {
     contracts: [
       {
-        contractId: 'cart.create',
+        contractName: 'cart.create',
         hasTests: true,
         testCount: 2,
         totalErrorTags: 1,
@@ -18,7 +18,7 @@ describe('formatCoverageReport', () => {
         uncoveredErrorTags: [],
       },
       {
-        contractId: 'cart.addItem',
+        contractName: 'cart.addItem',
         hasTests: false,
         testCount: 0,
         totalErrorTags: 2,
@@ -63,7 +63,7 @@ describe('formatCoverageReport', () => {
     const noErrorReport: CoverageReport = {
       contracts: [
         {
-          contractId: 'simple.op',
+          contractName: 'simple.op',
           hasTests: true,
           testCount: 1,
           totalErrorTags: 0,

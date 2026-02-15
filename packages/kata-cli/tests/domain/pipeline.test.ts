@@ -45,16 +45,15 @@ function makeInitialState(
 }
 
 const contractSource = `
-import { define, err, pass } from 'kata';
+import { define, err, guard, pass } from 'kata';
 
 type State = { readonly exists: boolean };
 type AlreadyExists = { readonly tag: 'AlreadyExists' };
 
 /** Create a cart */
-export const createCart = define<State, { userId: string }, AlreadyExists>({
-  id: 'cart.create',
+export const createCart = define<State, { userId: string }, AlreadyExists>('cart.create', {
   pre: [
-    (s) => (!s.exists ? pass : err({ tag: 'AlreadyExists' as const })),
+    guard('cart must not exist', (s) => (!s.exists ? pass : err({ tag: 'AlreadyExists' as const }))),
   ],
   transition: (state, input) => ({ ...state, exists: true }),
 });
@@ -105,7 +104,7 @@ describe('doc.parse', () => {
 
     const result = expectOk(docParse(state, { sourceFiles: entries }));
     expect(result.contracts.length).toBeGreaterThan(0);
-    expect(result.contracts[0].id).toBe('cart.create');
+    expect(result.contracts[0].name).toBe('cart.create');
   });
 
   test('parses test suites from source files', () => {
@@ -114,7 +113,7 @@ describe('doc.parse', () => {
 
     const result = expectOk(docParse(state, { sourceFiles: entries }));
     expect(result.testSuites.length).toBeGreaterThan(0);
-    expect(result.testSuites[0].contractId).toBe('cart.create');
+    expect(result.testSuites[0].contractName).toBe('cart.create');
   });
 
   test('rejects empty source files', () => {
@@ -137,15 +136,15 @@ describe('doc.parse', () => {
     const input = { sourceFiles: makeSourceFileEntries() };
     const after = docParse.transition(before, input);
     for (const post of docParse.post ?? []) {
-      expect(post(before, after, input)).toBe(true);
+      expect(post.fn(before, after, input)).toBe(true);
     }
     for (const inv of docParse.invariant ?? []) {
-      expect(inv(after)).toBe(true);
+      expect(inv.fn(after)).toBe(true);
     }
   });
 
   test('exposes contract metadata', () => {
-    expect(docParse.id).toBe('doc.parse');
+    expect(docParse.name).toBe('doc.parse');
     expect(docParse.pre.length).toBe(1);
   });
 });
@@ -162,7 +161,7 @@ describe('doc.filter', () => {
       docFilter(parsed, { filterIds: new Set(['cart.create']) })
     );
     expect(result.filtered.length).toBe(1);
-    expect(result.filtered[0].id).toBe('cart.create');
+    expect(result.filtered[0].name).toBe('cart.create');
   });
 
   test('passes all contracts when no filter', () => {
@@ -192,10 +191,10 @@ describe('doc.filter', () => {
     const input = { filterIds: new Set(['cart.create']) };
     const after = docFilter.transition(before, input);
     for (const post of docFilter.post ?? []) {
-      expect(post(before, after, input)).toBe(true);
+      expect(post.fn(before, after, input)).toBe(true);
     }
     for (const inv of docFilter.invariant ?? []) {
-      expect(inv(after)).toBe(true);
+      expect(inv.fn(after)).toBe(true);
     }
   });
 });
@@ -222,10 +221,10 @@ describe('doc.link', () => {
     const input = {} as Record<string, never>;
     const after = docLink.transition(before, input);
     for (const post of docLink.post ?? []) {
-      expect(post(before, after, input)).toBe(true);
+      expect(post.fn(before, after, input)).toBe(true);
     }
     for (const inv of docLink.invariant ?? []) {
-      expect(inv(after)).toBe(true);
+      expect(inv.fn(after)).toBe(true);
     }
   });
 });
@@ -265,10 +264,10 @@ describe('doc.analyze', () => {
     const input = { enabled: true };
     const after = docAnalyze.transition(before, input);
     for (const post of docAnalyze.post ?? []) {
-      expect(post(before, after, input)).toBe(true);
+      expect(post.fn(before, after, input)).toBe(true);
     }
     for (const inv of docAnalyze.invariant ?? []) {
-      expect(inv(after)).toBe(true);
+      expect(inv.fn(after)).toBe(true);
     }
   });
 
@@ -281,10 +280,10 @@ describe('doc.analyze', () => {
     const input = { enabled: false };
     const after = docAnalyze.transition(before, input);
     for (const post of docAnalyze.post ?? []) {
-      expect(post(before, after, input)).toBe(true);
+      expect(post.fn(before, after, input)).toBe(true);
     }
     for (const inv of docAnalyze.invariant ?? []) {
-      expect(inv(after)).toBe(true);
+      expect(inv.fn(after)).toBe(true);
     }
   });
 });
@@ -320,10 +319,10 @@ describe('doc.render', () => {
     const input = {} as Record<string, never>;
     const after = docRender.transition(before, input);
     for (const post of docRender.post ?? []) {
-      expect(post(before, after, input)).toBe(true);
+      expect(post.fn(before, after, input)).toBe(true);
     }
     for (const inv of docRender.invariant ?? []) {
-      expect(inv(after)).toBe(true);
+      expect(inv.fn(after)).toBe(true);
     }
   });
 });
@@ -443,8 +442,7 @@ describe('doc.generate scenario', () => {
   }, 20_000);
 
   test('exposes scenario metadata', () => {
-    expect(docGenerate.id).toBe('doc.generate');
-    expect(docGenerate.description).toBe('ドキュメント生成パイプライン');
+    expect(docGenerate.name).toBe('doc.generate');
   });
 });
 
@@ -476,6 +474,6 @@ describe('coverage.generate scenario', () => {
     );
 
     expect(result.filtered).toHaveLength(1);
-    expect(result.filtered[0].id).toBe('cart.create');
+    expect(result.filtered[0].name).toBe('cart.create');
   });
 });

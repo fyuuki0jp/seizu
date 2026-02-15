@@ -28,6 +28,7 @@
     "build": "tsup",
     "test": "vitest run",
     "doc:self": "node --import tsx/esm src/cli.ts doc --config kata.config.ts",
+    "doc:self:ja": "node --import tsx/esm src/cli.ts doc --config kata.config.ts --locale ja --output docs/contracts.ja.md",
     "doc:self:check": "node --import tsx/esm src/cli.ts doc --config kata.config.ts --check"
   },
   "dependencies": {
