@@ -2,59 +2,59 @@ import type { Result } from './result';
 import { err, ok } from './result';
 import type { Contract } from './types';
 
-export interface ScenarioFailure {
-  readonly stepIndex: number;
+// === Step: scenario 合成用の部分適用演算子 ===
+// contract の input をバインドし、state だけ受け取る関数を返す。
+// TInput はクロージャに捕捉、TError は型に保持。
+export type Step<TState, TError> = ((
+  state: TState
+) => Result<TState, TError>) & {
   readonly contractName: string;
-  readonly error: unknown;
-}
-
-export interface StepDef<TState, TInput, TError> {
-  readonly contract: Contract<TState, TInput, TError>;
-  readonly input: TInput;
-}
+};
 
 export function step<TState, TInput, TError>(
   contract: Contract<TState, TInput, TError>,
   input: TInput
-): StepDef<TState, TInput, TError> {
-  return {
-    contract,
-    input,
-  };
+): Step<TState, TError> {
+  const fn = (state: TState) => contract(state, input);
+  return Object.assign(fn, { contractName: contract.name }) as Step<
+    TState,
+    TError
+  >;
 }
 
-type AnyStep<TState> = StepDef<TState, unknown, unknown>;
-
-export interface ScenarioDef<TState, TInput> {
-  readonly name: string;
-  readonly flow: (input: TInput) => ReadonlyArray<AnyStep<TState>>;
+// === Scenario 型定義 ===
+export interface ScenarioFailure<TError = unknown> {
+  readonly stepIndex: number;
+  readonly contractName: string;
+  readonly error: TError;
 }
 
-export type Scenario<TState, TInput> = ((
+export type Scenario<TState, TInput, TError> = ((
   state: TState,
   input: TInput
-) => Result<TState, ScenarioFailure>) &
-  ScenarioDef<TState, TInput>;
+) => Result<TState, ScenarioFailure<TError>>) & {
+  readonly name: string;
+  readonly flow: (input: TInput) => ReadonlyArray<Step<TState, TError>>;
+};
 
-export function scenario<TState, TInput>(
+export function scenario<TState, TInput, TError>(
   name: string,
-  body: Omit<ScenarioDef<TState, TInput>, 'name'>
-): Scenario<TState, TInput> {
-  const def = { name, ...body };
+  flow: (input: TInput) => ReadonlyArray<Step<TState, TError>>
+): Scenario<TState, TInput, TError> {
   const execute = (
     state: TState,
     input: TInput
-  ): Result<TState, ScenarioFailure> => {
-    const steps = def.flow(input);
+  ): Result<TState, ScenarioFailure<TError>> => {
+    const steps = flow(input);
     let currentState = state;
 
     for (let i = 0; i < steps.length; i++) {
       const s = steps[i];
-      const result = s.contract(currentState, s.input);
+      const result = s(currentState);
       if (!result.ok) {
         return err({
           stepIndex: i,
-          contractName: s.contract.name,
+          contractName: s.contractName,
           error: result.error,
         });
       }
@@ -68,5 +68,5 @@ export function scenario<TState, TInput>(
     value: name,
     configurable: true,
   });
-  return Object.assign(execute, body) as Scenario<TState, TInput>;
+  return Object.assign(execute, { flow }) as Scenario<TState, TInput, TError>;
 }

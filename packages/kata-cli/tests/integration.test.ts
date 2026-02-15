@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { isOk } from 'kata';
 import ts from 'typescript';
 import { describe, expect, test } from 'vitest';
 import { getMessages } from '../src/doc/i18n/index';
@@ -38,7 +39,7 @@ describe('integration', () => {
   test('generates document from fixture files with Japanese locale', () => {
     const { contracts, testSuites, linked } = loadFixtures();
 
-    const markdown = renderMarkdown(
+    const renderResult = renderMarkdown(
       {
         title: 'カート管理 仕様書',
         description: 'ショッピングカートドメインのContract仕様',
@@ -48,6 +49,8 @@ describe('integration', () => {
       },
       { messages: ja }
     );
+    if (!isOk(renderResult)) throw new Error('render failed');
+    const markdown = renderResult.value;
 
     // Document structure
     expect(markdown).toContain('# カート管理 仕様書');
@@ -95,7 +98,7 @@ describe('integration', () => {
     expect(testSuites).toHaveLength(4);
 
     // Deterministic: running again produces the same output
-    const secondRun = renderMarkdown(
+    const secondResult = renderMarkdown(
       {
         title: 'カート管理 仕様書',
         description: 'ショッピングカートドメインのContract仕様',
@@ -105,13 +108,15 @@ describe('integration', () => {
       },
       { messages: ja }
     );
+    if (!isOk(secondResult)) throw new Error('render failed');
+    const secondRun = secondResult.value;
     expect(markdown).toBe(secondRun);
   });
 
   test('generates document from fixture files with English locale', () => {
     const { linked } = loadFixtures();
 
-    const markdown = renderMarkdown(
+    const renderResult = renderMarkdown(
       {
         title: 'Cart Specification',
         description: 'Shopping cart domain contracts',
@@ -121,6 +126,8 @@ describe('integration', () => {
       },
       { messages: en }
     );
+    if (!isOk(renderResult)) throw new Error('render failed');
+    const markdown = renderResult.value;
 
     // Accepts section (English)
     expect(markdown).toContain('### Acceptance Criteria');

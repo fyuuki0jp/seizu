@@ -17,6 +17,7 @@ export interface RunnerOptions {
   readonly numRuns?: number;
   readonly seed?: number;
   readonly path?: string;
+  readonly overRejection?: boolean;
 }
 
 function buildFcParams(
@@ -110,6 +111,7 @@ function verifyPostCondition(
   }
 
   const condId = condition.label;
+  let failureReason: string | undefined;
 
   const details = fc.check(
     fc.property(
@@ -122,14 +124,23 @@ function verifyPostCondition(
         const result = contract(state, input);
         if (!isOk(result)) return true;
 
-        return condition.fn(state, result.value, input);
+        const condResult = condition.fn(state, result.value, input);
+        if (condResult !== true) {
+          failureReason =
+            typeof condResult === 'string' ? condResult : undefined;
+          return false;
+        }
+        return true;
       }
     ),
     buildFcParams(numRuns, seed, path)
   );
 
   if (details.failed) {
-    return extractFailure(condId, 'post', 'postcondition_failed', details);
+    return {
+      ...extractFailure(condId, 'post', 'postcondition_failed', details),
+      reason: failureReason,
+    };
   }
 
   return {
@@ -154,6 +165,7 @@ function verifyInvariant(
   }
 
   const invId = inv.label;
+  let failureReason: string | undefined;
 
   const details = fc.check(
     fc.property(
@@ -166,14 +178,22 @@ function verifyInvariant(
         const result = contract(state, input);
         if (!isOk(result)) return true;
 
-        return inv.fn(result.value);
+        const invResult = inv.fn(result.value);
+        if (invResult !== true) {
+          failureReason = typeof invResult === 'string' ? invResult : undefined;
+          return false;
+        }
+        return true;
       }
     ),
     buildFcParams(numRuns, seed, path)
   );
 
   if (details.failed) {
-    return extractFailure(invId, 'invariant', 'invariant_failed', details);
+    return {
+      ...extractFailure(invId, 'invariant', 'invariant_failed', details),
+      reason: failureReason,
+    };
   }
 
   return {
@@ -224,6 +244,71 @@ function verifyGuardConsistency(
   };
 }
 
+function verifyGuardOverRejection(
+  entry: ContractEntry,
+  guardIndex: number,
+  numRuns: number,
+  seed?: number,
+  path?: string
+): CheckResult {
+  const { contract, state: stateArb, input: inputArb } = entry;
+  const g = contract.pre[guardIndex];
+  const guardId = `${g.label}.over_rejection`;
+
+  const details = fc.check(
+    fc.property(
+      stateArb as fc.Arbitrary<unknown>,
+      inputArb as fc.Arbitrary<unknown>,
+      (state, input) => {
+        const guardResult = g.fn(state, input);
+        if (guardResult.ok) return true;
+
+        // Guard rejected — check if transition would actually succeed
+        try {
+          const newState = contract.transition(state, input);
+
+          // Check post-conditions
+          if (contract.post) {
+            for (const cond of contract.post) {
+              if (cond.fn(state, newState, input) !== true) return true;
+            }
+          }
+
+          // Check invariants
+          if (contract.invariant) {
+            for (const inv of contract.invariant) {
+              if (inv.fn(newState) !== true) return true;
+            }
+          }
+
+          // Transition succeeded and all conditions pass → over-rejection
+          return false;
+        } catch {
+          // Transition threw → guard was justified
+          return true;
+        }
+      }
+    ),
+    buildFcParams(numRuns, seed, path)
+  );
+
+  if (details.failed) {
+    return extractFailure(
+      guardId,
+      'over_rejection',
+      'guard_over_rejection',
+      details
+    );
+  }
+
+  return {
+    id: guardId,
+    kind: 'over_rejection',
+    status: 'passed',
+    runs: details.numRuns,
+  };
+}
+
 export function verifyContract(
   entry: ContractEntry,
   options?: RunnerOptions
@@ -257,11 +342,25 @@ export function verifyContract(
     verifyGuardConsistency(entry, numRuns, options?.seed, options?.path)
   );
 
+  if (options?.overRejection) {
+    for (let i = 0; i < entry.contract.pre.length; i++) {
+      checks.push(
+        verifyGuardOverRejection(
+          entry,
+          i,
+          numRuns,
+          options?.seed,
+          options?.path
+        )
+      );
+    }
+  }
+
   return { contractName: entry.contract.name, checks };
 }
 
 export function verify(
-  entries: ContractEntry[],
+  entries: readonly ContractEntry[],
   options?: RunnerOptions
 ): VerifyResult {
   const results = entries.map((entry) => verifyContract(entry, options));

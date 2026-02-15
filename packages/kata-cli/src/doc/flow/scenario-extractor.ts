@@ -1,5 +1,4 @@
 import ts from 'typescript';
-import { findArrowFunctionProperty } from '../parser/ast-utils';
 import { buildFlowArtifact, type EntryPoint, FlowGraphBuilder } from './graph';
 import type { FlowArtifact } from './types';
 import { shortText } from './utils';
@@ -10,7 +9,7 @@ interface ParseResult {
 }
 
 export function extractScenarioFlow(
-  obj: ts.ObjectLiteralExpression,
+  flowFn: ts.ArrowFunction,
   sourceFile: ts.SourceFile,
   ownerName: string,
   contractVarMap: ReadonlyMap<string, string>
@@ -18,12 +17,6 @@ export function extractScenarioFlow(
   const builder = new FlowGraphBuilder();
   const start = builder.addNode('start', 'start');
   const end = builder.addNode('end', 'end');
-
-  const flowFn = findArrowFunctionProperty(obj, 'flow');
-  if (!flowFn) {
-    builder.addEdge(start, end);
-    return buildFlowArtifact('scenario', ownerName, builder.build());
-  }
 
   const entries: EntryPoint[] = [{ nodeId: start }];
   const result = ts.isArrayLiteralExpression(flowFn.body)

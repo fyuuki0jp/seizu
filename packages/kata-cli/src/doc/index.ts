@@ -60,7 +60,7 @@ export function generate(
   const flowEnabled = config.flow ?? true;
 
   if (allFiles.length === 0) {
-    return renderMarkdown(
+    const renderResult = renderMarkdown(
       {
         title: config.title,
         description: config.description,
@@ -73,6 +73,12 @@ export function generate(
         flowEnabled,
       }
     );
+    if (!isOk(renderResult)) {
+      throw new Error(
+        `Render failed at step ${renderResult.error.stepIndex}: ${renderResult.error.contractName}`
+      );
+    }
+    return renderResult.value;
   }
 
   const tsconfigPath = config.tsconfig

@@ -53,7 +53,12 @@ describe('postcondition_failed detection', () => {
       transition: (state, input) => ({
         value: state.value + input.amount,
       }),
-      post: [check('always negative', (_before, after) => after.value < 0)],
+      post: [
+        check(
+          'always negative',
+          (_before, after) => after.value < 0 || 'value is not negative'
+        ),
+      ],
     });
 
     const result = verifyContract(
@@ -75,7 +80,12 @@ describe('invariant_failed detection', () => {
       transition: (state, input) => ({
         value: state.value + input.amount,
       }),
-      invariant: [ensure('non-negative', (state) => state.value >= 0)],
+      invariant: [
+        ensure(
+          'non-negative',
+          (state) => state.value >= 0 || `value is negative: ${state.value}`
+        ),
+      ],
     });
 
     const result = verifyContract(
@@ -129,9 +139,13 @@ describe('all checks pass', () => {
         value: state.value + input.amount,
       }),
       post: [
-        check('value increases', (before, after) => after.value > before.value),
+        check(
+          'value increases',
+          (before, after) =>
+            after.value > before.value || 'value did not increase'
+        ),
       ],
-      invariant: [ensure('always true', () => true)],
+      invariant: [ensure('always true', (): true => true)],
     });
 
     const result = verifyContract(
@@ -162,5 +176,82 @@ describe('all checks pass', () => {
 
     const preCheck = result.checks.find((c) => c.kind === 'pre');
     expect(preCheck?.id).toBe('positiveInput');
+  });
+});
+
+describe('guard_over_rejection detection', () => {
+  test('detects when guard rejects but transition would succeed', () => {
+    // Guard rejects amount <= 0, but transition works fine for any amount
+    const contract = define<State, Input, Err>('test.overReject', {
+      pre: [
+        guard('positive only', (_s, i) =>
+          i.amount > 0 ? pass : err({ tag: 'NotPositive' })
+        ),
+      ],
+      transition: (state, input) => ({
+        value: state.value + input.amount,
+      }),
+    });
+
+    const result = verifyContract(
+      { contract, state: stateArb, input: inputArb },
+      { numRuns: 50, overRejection: true }
+    );
+
+    const orCheck = result.checks.find((c) => c.kind === 'over_rejection');
+    expect(orCheck).toBeDefined();
+    expect(orCheck?.status).toBe('failed');
+    expect(orCheck?.violation).toBe('guard_over_rejection');
+  });
+
+  test('passes when guard rejection is justified by post/invariant', () => {
+    // Guard rejects amount <= 0, and invariant requires non-negative value
+    const contract = define<State, Input, Err>('test.justifiedGuard', {
+      pre: [
+        guard('positive only', (_s, i) =>
+          i.amount > 0 ? pass : err({ tag: 'NotPositive' })
+        ),
+      ],
+      transition: (state, input) => ({
+        value: state.value + input.amount,
+      }),
+      post: [
+        check(
+          'value increases',
+          (before, after) =>
+            after.value > before.value || 'value did not increase'
+        ),
+      ],
+    });
+
+    const result = verifyContract(
+      { contract, state: stateArb, input: inputArb },
+      { numRuns: 50, overRejection: true }
+    );
+
+    const orCheck = result.checks.find((c) => c.kind === 'over_rejection');
+    expect(orCheck).toBeDefined();
+    expect(orCheck?.status).toBe('passed');
+  });
+
+  test('skips over-rejection check when option is not set', () => {
+    const contract = define<State, Input, Err>('test.noOverReject', {
+      pre: [
+        guard('positive only', (_s, i) =>
+          i.amount > 0 ? pass : err({ tag: 'NotPositive' })
+        ),
+      ],
+      transition: (state, input) => ({
+        value: state.value + input.amount,
+      }),
+    });
+
+    const result = verifyContract(
+      { contract, state: stateArb, input: inputArb },
+      { numRuns: 50 }
+    );
+
+    const orCheck = result.checks.find((c) => c.kind === 'over_rejection');
+    expect(orCheck).toBeUndefined();
   });
 });

@@ -49,17 +49,33 @@ function parseScenarioCall(
   const name = nameArg.text;
 
   const bodyArg = call.arguments[1];
-  if (!ts.isObjectLiteralExpression(bodyArg)) return undefined;
 
-  const steps = extractStepsFromFlow(bodyArg, sourceFile, contractVarMap);
-  const flow = extractScenarioFlow(bodyArg, sourceFile, name, contractVarMap);
+  // New API: scenario(name, (input) => [...])
+  // Legacy API: scenario(name, { flow: (input) => [...] })
+  const flowFn = ts.isArrowFunction(bodyArg)
+    ? bodyArg
+    : ts.isObjectLiteralExpression(bodyArg)
+      ? findArrowFunctionProperty(bodyArg, 'flow')
+      : undefined;
+
+  if (!flowFn && !ts.isObjectLiteralExpression(bodyArg)) return undefined;
+
+  const steps = flowFn
+    ? extractStepsFromArrow(flowFn, sourceFile, contractVarMap)
+    : [];
+  const flow = flowFn
+    ? extractScenarioFlow(flowFn, sourceFile, name, contractVarMap)
+    : undefined;
   const variableName = findEnclosingVariableName(call);
   const accepts = extractAcceptsTags(call, sourceFile);
   const tsdocDescription = variableName
     ? extractVariableTSDoc(variableName, sourceFile)
     : undefined;
   const description =
-    tsdocDescription ?? extractStringProperty(bodyArg, 'description');
+    tsdocDescription ??
+    (ts.isObjectLiteralExpression(bodyArg)
+      ? extractStringProperty(bodyArg, 'description')
+      : undefined);
 
   const line =
     sourceFile.getLineAndCharacterOfPosition(call.getStart(sourceFile)).line +
@@ -78,17 +94,14 @@ function parseScenarioCall(
 }
 
 /**
- * Extract steps from the `flow:` arrow function property.
+ * Extract steps from a flow arrow function.
  * Supports both concise body `(input) => [step(...)]` and block body `(input) => { return [...]; }`.
  */
-function extractStepsFromFlow(
-  obj: ts.ObjectLiteralExpression,
+function extractStepsFromArrow(
+  flowFn: ts.ArrowFunction,
   sourceFile: ts.SourceFile,
   contractVarMap: Map<string, string>
 ): ParsedScenarioStep[] {
-  const flowFn = findArrowFunctionProperty(obj, 'flow');
-  if (!flowFn) return [];
-
   const arrayExpr = findArrayInArrowBody(flowFn.body);
   if (arrayExpr) {
     return arrayExpr.elements

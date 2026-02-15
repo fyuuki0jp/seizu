@@ -2,9 +2,15 @@ export type ViolationKind =
   | 'pre_not_guarded'
   | 'postcondition_failed'
   | 'invariant_failed'
-  | 'unexpected_error';
+  | 'unexpected_error'
+  | 'guard_over_rejection';
 
-export type CheckKind = 'pre' | 'post' | 'invariant' | 'consistency';
+export type CheckKind =
+  | 'pre'
+  | 'post'
+  | 'invariant'
+  | 'consistency'
+  | 'over_rejection';
 
 export interface CheckResult {
   readonly id: string;
@@ -12,6 +18,7 @@ export interface CheckResult {
   readonly status: 'passed' | 'failed';
   readonly runs: number;
   readonly violation?: ViolationKind;
+  readonly reason?: string;
   readonly counterexample?: {
     readonly state: unknown;
     readonly input: unknown;

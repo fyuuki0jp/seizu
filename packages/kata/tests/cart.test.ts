@@ -65,12 +65,17 @@ const addItem = define<
   post: [
     check(
       'item count increases',
-      (before, after) => after.items.size === before.items.size + 1
+      (before, after) =>
+        after.items.size === before.items.size + 1 ||
+        'item count did not increase by 1'
     ),
   ],
   invariant: [
-    ensure('qty positive', (s) =>
-      [...s.items.values()].every((i) => i.qty > 0)
+    ensure(
+      'qty positive',
+      (s) =>
+        [...s.items.values()].every((i) => i.qty > 0) ||
+        'some item has non-positive qty'
     ),
   ],
 });
@@ -98,7 +103,9 @@ const removeItem = define<
   post: [
     check(
       'item count decreases',
-      (before, after) => after.items.size === before.items.size - 1
+      (before, after) =>
+        after.items.size === before.items.size - 1 ||
+        'item count did not decrease by 1'
     ),
   ],
 });

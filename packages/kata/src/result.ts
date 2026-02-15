@@ -30,3 +30,35 @@ export const match = <T, E, U>(
 ): U => (result.ok ? handlers.ok(result.value) : handlers.err(result.error));
 
 export const pass: Result<void, never> = { ok: true, value: undefined };
+
+export const mapErr = <T, E, F>(
+  result: Result<T, E>,
+  fn: (error: E) => F
+): Result<T, F> => (result.ok ? result : err(fn(result.error)));
+
+export const unwrapOr = <T, E>(result: Result<T, E>, defaultValue: T): T =>
+  result.ok ? result.value : defaultValue;
+
+export const tryCatch = <T, E>(
+  fn: () => T,
+  onError: (error: unknown) => E
+): Result<T, E> => {
+  try {
+    return ok(fn());
+  } catch (e) {
+    return err(onError(e));
+  }
+};
+
+export const orElse = <T, E, F>(
+  result: Result<T, E>,
+  fn: (error: E) => Result<T, F>
+): Result<T, F> => (result.ok ? result : fn(result.error));
+
+export const tap = <T, E>(
+  result: Result<T, E>,
+  fn: (value: T) => void
+): Result<T, E> => {
+  if (result.ok) fn(result.value);
+  return result;
+};

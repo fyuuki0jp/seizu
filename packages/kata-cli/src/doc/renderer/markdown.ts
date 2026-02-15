@@ -1,9 +1,11 @@
-import { isOk } from 'kata';
+import type { ScenarioFailure } from 'kata';
+import { err, isOk, ok, type Result } from 'kata';
 import {
   renderContractSections,
   renderCoverageSection,
   renderMarkdownScenario,
 } from '../../domain/render';
+import type { RenderError } from '../../domain/types';
 import type { CoverageReport } from '../analyzer/coverage-types';
 import type { Messages } from '../i18n/types';
 import type { DocumentModel } from '../types';
@@ -21,7 +23,7 @@ export interface RenderOptions {
 export function renderMarkdown(
   model: DocumentModel,
   options: RenderOptions
-): string {
+): Result<string, ScenarioFailure<RenderError>> {
   const flowEnabled = options.flowEnabled ?? true;
   const result = renderMarkdownScenario([], {
     title: model.title,
@@ -33,9 +35,7 @@ export function renderMarkdown(
   });
 
   if (!isOk(result)) {
-    throw new Error(
-      `render.markdown failed at step ${result.error.stepIndex}: ${result.error.contractName}`
-    );
+    return err(result.error);
   }
 
   let lines = renderContractSections(result.value, {
@@ -52,5 +52,5 @@ export function renderMarkdown(
     });
   }
 
-  return lines.join('\n').replace(/\n{3,}/g, '\n\n');
+  return ok(lines.join('\n').replace(/\n{3,}/g, '\n\n'));
 }

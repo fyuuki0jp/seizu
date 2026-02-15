@@ -119,7 +119,7 @@ export function registerDocCommand(cli: CAC): void {
         let flowArtifacts: FlowArtifact[] = [];
 
         if (sourceFiles.length === 0) {
-          markdown = renderMarkdown(
+          const renderResult = renderMarkdown(
             {
               title: effectiveConfig.title,
               description: effectiveConfig.description,
@@ -129,6 +129,14 @@ export function registerDocCommand(cli: CAC): void {
             },
             { messages, flowEnabled: effectiveConfig.flow ?? true }
           );
+          if (!isOk(renderResult)) {
+            console.error(
+              `Render failed at step ${renderResult.error.stepIndex}: ${renderResult.error.contractName}`
+            );
+            process.exit(1);
+            return;
+          }
+          markdown = renderResult.value;
         } else {
           const result = docGenerate(initialState, {
             sourceFiles,

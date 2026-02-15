@@ -75,7 +75,8 @@ export const docParse = define<DocPipelineState, ParseInput, PipelineError>(
         'source file paths are tracked uniquely',
         (_before, after, input) =>
           after.sourceFiles.length ===
-          new Set(input.sourceFiles.map((entry) => entry.path)).size
+            new Set(input.sourceFiles.map((entry) => entry.path)).size ||
+          'source file paths contain duplicates'
       ),
     ],
   }
@@ -105,7 +106,7 @@ export const docFilter = define<DocPipelineState, FilterInput, never>(
         (_before, after) =>
           after.filtered.every((f) =>
             after.contracts.some((c) => c.name === f.name)
-          )
+          ) || 'filtered contracts contain entries not in all contracts'
       ),
     ],
   }
@@ -126,7 +127,9 @@ export const docLink = define<DocPipelineState, Record<string, never>, never>(
     post: [
       check(
         'every filtered contract has a corresponding linked entry',
-        (_before, after) => after.linked.length === after.filtered.length
+        (_before, after) =>
+          after.linked.length === after.filtered.length ||
+          `linked count ${after.linked.length} does not match filtered count ${after.filtered.length}`
       ),
     ],
   }
@@ -150,7 +153,10 @@ export const docAnalyze = define<DocPipelineState, AnalyzeInput, never>(
       check(
         'coverage report is present when analysis is enabled',
         (_before, after, input) =>
-          input.enabled ? after.coverageReport !== undefined : true
+          input.enabled
+            ? after.coverageReport !== undefined ||
+              'coverage report is missing after enabled analysis'
+            : true
       ),
     ],
   }
@@ -173,13 +179,9 @@ export const docRender = define<DocPipelineState, Record<string, never>, never>(
         messages: state.messages,
       });
 
-      if (!isOk(result)) {
-        throw new Error(
-          `render.markdown failed at step ${result.error.stepIndex}: ${result.error.contractName}`
-        );
-      }
+      const baseLines = isOk(result) ? result.value : [];
 
-      let lines = renderContractSections(result.value, {
+      let lines = renderContractSections(baseLines, {
         contracts: state.linked,
         hasScenarios: state.linkedScenarios.length > 0,
         messages: state.messages,
@@ -200,7 +202,10 @@ export const docRender = define<DocPipelineState, Record<string, never>, never>(
       check(
         'non-empty linked state produces non-empty markdown',
         (_before, after) =>
-          after.linked.length > 0 ? after.markdown.length > 0 : true
+          after.linked.length > 0
+            ? after.markdown.length > 0 ||
+              'markdown is empty despite linked contracts'
+            : true
       ),
     ],
   }
@@ -209,34 +214,23 @@ export const docRender = define<DocPipelineState, Record<string, never>, never>(
 // === doc.generate scenario ===
 
 /** @accepts ソースファイルからContract仕様書を自動生成できる */
-export const docGenerate = scenario<DocPipelineState, GenerateInput>(
-  'doc.generate',
-  {
-    flow: (input) => [
-      step(docParse, { sourceFiles: input.sourceFiles }),
-      step(docFilter, {
-        filterIds: input.filterIds,
-      } as FilterInput),
-      step(docLink, {} as Record<string, never>),
-      step(docAnalyze, { enabled: input.coverageEnabled }),
-      step(docRender, {} as Record<string, never>),
-    ],
-  }
-);
+export const docGenerate = scenario('doc.generate', (input: GenerateInput) => [
+  step(docParse, { sourceFiles: input.sourceFiles }),
+  step(docFilter, { filterIds: input.filterIds }),
+  step(docLink, {}),
+  step(docAnalyze, { enabled: input.coverageEnabled }),
+  step(docRender, {}),
+]);
 
 // === coverage.generate scenario ===
 
 /** @accepts テストカバレッジレポートを生成できる */
-export const coverageGenerate = scenario<
-  DocPipelineState,
-  CoverageGenerateInput
->('coverage.generate', {
-  flow: (input) => [
+export const coverageGenerate = scenario(
+  'coverage.generate',
+  (input: CoverageGenerateInput) => [
     step(docParse, { sourceFiles: input.sourceFiles }),
-    step(docFilter, {
-      filterIds: input.filterIds,
-    } as FilterInput),
-    step(docLink, {} as Record<string, never>),
+    step(docFilter, { filterIds: input.filterIds }),
+    step(docLink, {}),
     step(docAnalyze, { enabled: true }),
-  ],
-});
+  ]
+);

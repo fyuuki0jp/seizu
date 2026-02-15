@@ -72,16 +72,14 @@ type PurchaseInput = {
   price: number;
 };
 
-const purchase = scenario<CartState, PurchaseInput>('cart.purchase', {
-  flow: (input) => [
-    step(createCart, { userId: input.userId }),
-    step(addItem, {
-      itemId: input.itemId,
-      qty: input.qty,
-      price: input.price,
-    }),
-  ],
-});
+const purchase = scenario('cart.purchase', (input: PurchaseInput) => [
+  step(createCart, { userId: input.userId }),
+  step(addItem, {
+    itemId: input.itemId,
+    qty: input.qty,
+    price: input.price,
+  }),
+]);
 
 describe('scenario', () => {
   test('all steps succeed → isOk, final state returned', () => {
@@ -100,13 +98,11 @@ describe('scenario', () => {
   });
 
   test('state is threaded through steps', () => {
-    const multiAdd = scenario<CartState, { userId: string }>('cart.multiAdd', {
-      flow: (input) => [
-        step(createCart, { userId: input.userId }),
-        step(addItem, { itemId: 'apple', qty: 1, price: 1.0 }),
-        step(addItem, { itemId: 'banana', qty: 2, price: 0.5 }),
-      ],
-    });
+    const multiAdd = scenario('cart.multiAdd', (input: { userId: string }) => [
+      step(createCart, { userId: input.userId }),
+      step(addItem, { itemId: 'apple', qty: 1, price: 1.0 }),
+      step(addItem, { itemId: 'banana', qty: 2, price: 0.5 }),
+    ]);
 
     const result = multiAdd(emptyState, { userId: 'bob' });
     expect(isOk(result)).toBe(true);
@@ -134,9 +130,7 @@ describe('scenario', () => {
   });
 
   test('empty flow → isOk, state unchanged', () => {
-    const noop = scenario<CartState, void>('cart.noop', {
-      flow: () => [],
-    });
+    const noop = scenario('cart.noop', () => []);
 
     const result = noop(emptyState, undefined);
     expect(isOk(result)).toBe(true);
@@ -156,18 +150,16 @@ describe('scenario', () => {
       items: { id: string; qty: number; price: number }[];
     };
 
-    const bulkPurchase = scenario<CartState, BulkInput>('cart.bulkPurchase', {
-      flow: (input) => [
-        step(createCart, { userId: input.userId }),
-        ...input.items.map((item) =>
-          step(addItem, {
-            itemId: item.id,
-            qty: item.qty,
-            price: item.price,
-          })
-        ),
-      ],
-    });
+    const bulkPurchase = scenario('cart.bulkPurchase', (input: BulkInput) => [
+      step(createCart, { userId: input.userId }),
+      ...input.items.map((item) =>
+        step(addItem, {
+          itemId: item.id,
+          qty: item.qty,
+          price: item.price,
+        })
+      ),
+    ]);
 
     const result = bulkPurchase(emptyState, {
       userId: 'alice',
@@ -187,14 +179,12 @@ describe('scenario', () => {
   test('dynamic step count with map', () => {
     type RepeatInput = { userId: string; count: number };
 
-    const repeatAdd = scenario<CartState, RepeatInput>('cart.repeatAdd', {
-      flow: (input) => [
-        step(createCart, { userId: input.userId }),
-        ...Array.from({ length: input.count }, (_, i) =>
-          step(addItem, { itemId: `item-${i}`, qty: 1, price: 1.0 })
-        ),
-      ],
-    });
+    const repeatAdd = scenario('cart.repeatAdd', (input: RepeatInput) => [
+      step(createCart, { userId: input.userId }),
+      ...Array.from({ length: input.count }, (_, i) =>
+        step(addItem, { itemId: `item-${i}`, qty: 1, price: 1.0 })
+      ),
+    ]);
 
     const result = repeatAdd(emptyState, { userId: 'alice', count: 5 });
     expect(isOk(result)).toBe(true);
@@ -210,11 +200,9 @@ describe('scenario', () => {
       items: new Map([['apple', { qty: 1, price: 1.0 }]]),
     };
 
-    const addOnly = scenario<CartState, { itemId: string }>('cart.addOnly', {
-      flow: (input) => [
-        step(addItem, { itemId: input.itemId, qty: 1, price: 1.0 }),
-      ],
-    });
+    const addOnly = scenario('cart.addOnly', (input: { itemId: string }) => [
+      step(addItem, { itemId: input.itemId, qty: 1, price: 1.0 }),
+    ]);
 
     const result = addOnly(stateWithItem, { itemId: 'apple' });
     expect(isErr(result)).toBe(true);

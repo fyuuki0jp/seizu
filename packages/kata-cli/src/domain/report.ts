@@ -18,12 +18,19 @@ export const reportSummary = define<string, ReporterInput, ReporterError>(
     ],
     transition: (_, input) => summary(input.result),
     post: [
-      check('output contains kata-verify header', (_, after) =>
-        after.includes('kata-verify')
+      check(
+        'output contains kata-verify header',
+        (_, after) =>
+          after.includes('kata-verify') ||
+          'output is missing kata-verify header'
       ),
     ],
     invariant: [
-      ensure('output is always a string', (state) => typeof state === 'string'),
+      ensure(
+        'output is always a string',
+        (state) =>
+          typeof state === 'string' || `expected string, got ${typeof state}`
+      ),
     ],
   }
 );
@@ -40,9 +47,18 @@ export const reportReplay = define<string, ReporterInput, ReporterError>(
       ),
     ],
     transition: (_, input) => replay(input.result),
-    post: [check('output is non-empty', (_, after) => after.length > 0)],
+    post: [
+      check(
+        'output is non-empty',
+        (_, after) => after.length > 0 || 'output is empty'
+      ),
+    ],
     invariant: [
-      ensure('output is always a string', (state) => typeof state === 'string'),
+      ensure(
+        'output is always a string',
+        (state) =>
+          typeof state === 'string' || `expected string, got ${typeof state}`
+      ),
     ],
   }
 );

@@ -1,3 +1,4 @@
+import { isOk } from 'kata';
 import { describe, expect, test } from 'vitest';
 import type { FlowArtifact } from '../src/doc/flow';
 import { getMessages } from '../src/doc/i18n/index';
@@ -84,7 +85,9 @@ describe('renderMarkdown', () => {
   };
 
   test('renders a complete document with English locale', () => {
-    const markdown = renderMarkdown(model, { messages: en });
+    const renderResult = renderMarkdown(model, { messages: en });
+    if (!isOk(renderResult)) throw new Error('render failed');
+    const markdown = renderResult.value;
 
     expect(markdown).toContain('# Cart Specification');
     expect(markdown).toContain('Shopping cart domain contracts');
@@ -118,7 +121,9 @@ describe('renderMarkdown', () => {
   });
 
   test('renders with Japanese locale', () => {
-    const markdown = renderMarkdown(model, { messages: ja });
+    const renderResult = renderMarkdown(model, { messages: ja });
+    if (!isOk(renderResult)) throw new Error('render failed');
+    const markdown = renderResult.value;
 
     expect(markdown).toContain('### 事前条件');
     expect(markdown).toContain('### 事後条件');
@@ -158,7 +163,9 @@ describe('renderMarkdown', () => {
       sourceFiles: ['test.ts'],
     };
 
-    const markdown = renderMarkdown(minimalModel, { messages: en });
+    const renderResult = renderMarkdown(minimalModel, { messages: en });
+    if (!isOk(renderResult)) throw new Error('render failed');
+    const markdown = renderResult.value;
     expect(markdown).toContain('_Not defined_');
     expect(markdown).toContain('_No tests found');
   });
@@ -203,7 +210,9 @@ describe('renderMarkdown', () => {
       sourceFiles: ['test.ts'],
     };
 
-    const markdown = renderMarkdown(failureModel, { messages: en });
+    const renderResult = renderMarkdown(failureModel, { messages: en });
+    if (!isOk(renderResult)) throw new Error('render failed');
+    const markdown = renderResult.value;
     expect(markdown).toContain('should fail on invalid input');
     expect(markdown).toContain(en.testResult.errorGeneric);
   });
@@ -248,7 +257,9 @@ describe('renderMarkdown', () => {
       sourceFiles: ['test.ts'],
     };
 
-    const markdown = renderMarkdown(failureModel, { messages: en });
+    const renderResult = renderMarkdown(failureModel, { messages: en });
+    if (!isOk(renderResult)) throw new Error('render failed');
+    const markdown = renderResult.value;
     expect(markdown).toContain('NotFound');
   });
 
@@ -294,7 +305,9 @@ describe('renderMarkdown', () => {
       sourceFiles: ['test.ts'],
     };
 
-    const markdown = renderMarkdown(tieredModel, { messages: en });
+    const renderResult = renderMarkdown(tieredModel, { messages: en });
+    if (!isOk(renderResult)) throw new Error('render failed');
+    const markdown = renderResult.value;
     expect(markdown).toContain('## Scenarios');
     expect(markdown).toContain(`## ${en.contractDetail.sectionTitle}`);
   });
@@ -347,7 +360,9 @@ describe('renderMarkdown', () => {
       sourceFiles: ['test.ts'],
     };
 
-    const markdown = renderMarkdown(sortModel, { messages: en });
+    const renderResult = renderMarkdown(sortModel, { messages: en });
+    if (!isOk(renderResult)) throw new Error('render failed');
+    const markdown = renderResult.value;
     const aPos = markdown.indexOf('## a.first');
     const zPos = markdown.indexOf('## z.last');
     expect(aPos).toBeLessThan(zPos);
@@ -402,7 +417,9 @@ describe('renderMarkdown', () => {
       sourceFiles: ['test.ts'],
     };
 
-    const markdown = renderMarkdown(flowModel, { messages: en });
+    const renderResult = renderMarkdown(flowModel, { messages: en });
+    if (!isOk(renderResult)) throw new Error('render failed');
+    const markdown = renderResult.value;
     expect(markdown).toContain('<!-- flow-hash: abc123 -->');
     expect(markdown).toContain('<details>');
     expect(markdown).toContain('Flow Summary');

@@ -1,5 +1,7 @@
 import type { Result } from './result';
 
+export type ConditionResult = true | string;
+
 export type Guard<TState, TInput, TError> = {
   readonly label: string;
   readonly fn: (state: TState, input: TInput) => Result<void, TError>;
@@ -7,12 +9,16 @@ export type Guard<TState, TInput, TError> = {
 
 export type Condition<TState, TInput> = {
   readonly label: string;
-  readonly fn: (before: TState, after: TState, input: TInput) => boolean;
+  readonly fn: (
+    before: TState,
+    after: TState,
+    input: TInput
+  ) => ConditionResult;
 };
 
 export type Invariant<TState> = {
   readonly label: string;
-  readonly fn: (state: TState) => boolean;
+  readonly fn: (state: TState) => ConditionResult;
 };
 
 export function guard<TState, TInput, TError>(
@@ -24,14 +30,14 @@ export function guard<TState, TInput, TError>(
 
 export function check<TState, TInput>(
   label: string,
-  fn: (before: TState, after: TState, input: TInput) => boolean
+  fn: (before: TState, after: TState, input: TInput) => ConditionResult
 ): Condition<TState, TInput> {
   return { label, fn };
 }
 
 export function ensure<TState>(
   label: string,
-  fn: (state: TState) => boolean
+  fn: (state: TState) => ConditionResult
 ): Invariant<TState> {
   return { label, fn };
 }
@@ -49,3 +55,9 @@ export type Contract<TState, TInput, TError> = ((
   input: TInput
 ) => Result<TState, TError>) &
   ContractDef<TState, TInput, TError>;
+
+export type ContractMode = 'production' | 'strict';
+
+export interface ContractOptions {
+  readonly mode?: ContractMode;
+}

@@ -360,7 +360,9 @@ describe('render.markdown scenario', () => {
       sourceFiles: ['test.ts'],
     };
 
-    const expected = renderMarkdown(model, { messages, coverageReport });
+    const expectedResult = renderMarkdown(model, { messages, coverageReport });
+    if (!isOk(expectedResult)) throw new Error('render failed');
+    const expected = expectedResult.value;
     const prelude = renderMarkdownScenario([], {
       title: model.title,
       description: model.description,

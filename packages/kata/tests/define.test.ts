@@ -1,9 +1,14 @@
 import { describe, expect, test, vi } from 'vitest';
-import { define } from '../src/define';
+import {
+  define,
+  InvariantViolation,
+  PostconditionViolation,
+  TransitionPanic,
+} from '../src/define';
 import type { Result } from '../src/result';
 import { err, pass } from '../src/result';
 import { expectErr, expectOk } from '../src/testing';
-import { guard } from '../src/types';
+import { check, ensure, guard } from '../src/types';
 
 type State = { value: number };
 type Input = { amount: number };
@@ -145,5 +150,155 @@ describe('define', () => {
 
     const error = expectErr(contract({ value: 42 }, { amount: 7 }));
     expect(error.detail).toBe('state=42,input=7');
+  });
+});
+
+describe('strict mode', () => {
+  test('transition throw → TransitionPanic with cause', () => {
+    const contract = define<State, Input, Err>(
+      'test.panic',
+      {
+        pre: [],
+        transition: () => {
+          throw new Error('boom');
+        },
+      },
+      { mode: 'strict' }
+    );
+
+    expect(() => contract({ value: 0 }, { amount: 1 })).toThrow(
+      TransitionPanic
+    );
+
+    try {
+      contract({ value: 0 }, { amount: 1 });
+    } catch (e) {
+      expect(e).toBeInstanceOf(TransitionPanic);
+      expect((e as TransitionPanic).cause).toBeInstanceOf(Error);
+      expect((e as TransitionPanic).message).toContain('test.panic');
+      expect((e as TransitionPanic).message).toContain('boom');
+    }
+  });
+
+  test('postcondition violation → PostconditionViolation', () => {
+    const contract = define<State, Input, Err>(
+      'test.postViolation',
+      {
+        pre: [],
+        transition: (state, input) => ({ value: state.value + input.amount }),
+        post: [
+          check(
+            'always negative',
+            (_before, after) =>
+              after.value < 0 || `value ${after.value} is not negative`
+          ),
+        ],
+      },
+      { mode: 'strict' }
+    );
+
+    expect(() => contract({ value: 0 }, { amount: 5 })).toThrow(
+      PostconditionViolation
+    );
+
+    try {
+      contract({ value: 0 }, { amount: 5 });
+    } catch (e) {
+      expect(e).toBeInstanceOf(PostconditionViolation);
+      expect((e as PostconditionViolation).message).toContain(
+        'always negative'
+      );
+      expect((e as PostconditionViolation).message).toContain(
+        'value 5 is not negative'
+      );
+    }
+  });
+
+  test('invariant violation → InvariantViolation', () => {
+    const contract = define<State, Input, Err>(
+      'test.invViolation',
+      {
+        pre: [],
+        transition: (state, input) => ({ value: state.value + input.amount }),
+        invariant: [
+          ensure(
+            'non-negative',
+            (s) => s.value >= 0 || `value ${s.value} is negative`
+          ),
+        ],
+      },
+      { mode: 'strict' }
+    );
+
+    expect(() => contract({ value: -10 }, { amount: 5 })).toThrow(
+      InvariantViolation
+    );
+
+    try {
+      contract({ value: -10 }, { amount: 5 });
+    } catch (e) {
+      expect(e).toBeInstanceOf(InvariantViolation);
+      expect((e as InvariantViolation).message).toContain('non-negative');
+      expect((e as InvariantViolation).message).toContain(
+        'value -5 is negative'
+      );
+    }
+  });
+
+  test('production mode (default) does not evaluate post/invariant', () => {
+    const postCheck = vi.fn((): true => {
+      throw new Error('post should not be called');
+    });
+
+    const contract = define<State, Input, Err>('test.production', {
+      pre: [],
+      transition: (state, input) => ({ value: state.value + input.amount }),
+      post: [{ label: 'post', fn: postCheck }],
+    });
+
+    expectOk(contract({ value: 1 }, { amount: 2 }));
+    expect(postCheck).not.toHaveBeenCalled();
+  });
+
+  test('strict mode evaluates post/invariant on success', () => {
+    const contract = define<State, Input, Err>(
+      'test.strictOk',
+      {
+        pre: [],
+        transition: (state, input) => ({ value: state.value + input.amount }),
+        post: [
+          check(
+            'value increases',
+            (before, after) =>
+              after.value > before.value || 'value did not increase'
+          ),
+        ],
+        invariant: [ensure('always true', (): true => true)],
+      },
+      { mode: 'strict' }
+    );
+
+    // Should not throw when conditions pass
+    const state = expectOk(contract({ value: 1 }, { amount: 2 }));
+    expect(state).toEqual({ value: 3 });
+  });
+
+  test('guard panic in strict mode wraps as TransitionPanic', () => {
+    const contract = define<State, Input, Err>(
+      'test.guardPanic',
+      {
+        pre: [
+          guard('broken', () => {
+            throw new Error('guard exploded');
+          }),
+        ],
+        transition: (state) => state,
+      },
+      { mode: 'strict' }
+    );
+
+    expect(() => contract({ value: 0 }, { amount: 1 })).toThrow(
+      TransitionPanic
+    );
   });
 });

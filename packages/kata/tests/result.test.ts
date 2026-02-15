@@ -1,5 +1,19 @@
 import { describe, expect, test } from 'vitest';
-import { err, flatMap, isErr, isOk, map, match, ok, pass } from '../src/result';
+import {
+  err,
+  flatMap,
+  isErr,
+  isOk,
+  map,
+  mapErr,
+  match,
+  ok,
+  orElse,
+  pass,
+  tap,
+  tryCatch,
+  unwrapOr,
+} from '../src/result';
 
 describe('ok', () => {
   test('creates a success result', () => {
@@ -106,6 +120,81 @@ describe('match', () => {
       err: (e) => `error: ${e}`,
     });
     expect(result).toBe('error: oops');
+  });
+});
+
+describe('mapErr', () => {
+  test('transforms error value', () => {
+    const result = mapErr(err('oops'), (e) => `wrapped: ${e}`);
+    expect(result).toEqual({ ok: false, error: 'wrapped: oops' });
+  });
+
+  test('passes through success unchanged', () => {
+    const result = mapErr(ok(42), (e: string) => `wrapped: ${e}`);
+    expect(result).toEqual({ ok: true, value: 42 });
+  });
+});
+
+describe('unwrapOr', () => {
+  test('returns value for ok result', () => {
+    expect(unwrapOr(ok(42), 0)).toBe(42);
+  });
+
+  test('returns default for err result', () => {
+    expect(unwrapOr(err('oops'), 0)).toBe(0);
+  });
+});
+
+describe('tryCatch', () => {
+  test('wraps successful function in ok', () => {
+    const result = tryCatch(
+      () => 42,
+      (e) => String(e)
+    );
+    expect(result).toEqual({ ok: true, value: 42 });
+  });
+
+  test('wraps thrown error in err', () => {
+    const result = tryCatch(
+      () => {
+        throw new Error('boom');
+      },
+      (e) => (e instanceof Error ? e.message : 'unknown')
+    );
+    expect(result).toEqual({ ok: false, error: 'boom' });
+  });
+});
+
+describe('orElse', () => {
+  test('passes through success unchanged', () => {
+    const result = orElse(ok(42), (e: string) => ok(Number.parseInt(e, 10)));
+    expect(result).toEqual({ ok: true, value: 42 });
+  });
+
+  test('applies fallback on error', () => {
+    const result = orElse(err('99'), (e) => ok(Number.parseInt(e, 10)));
+    expect(result).toEqual({ ok: true, value: 99 });
+  });
+
+  test('can return a new error from fallback', () => {
+    const result = orElse(err('oops'), () => err('still broken'));
+    expect(result).toEqual({ ok: false, error: 'still broken' });
+  });
+});
+
+describe('tap', () => {
+  test('calls function for ok result and returns original', () => {
+    const captured: number[] = [];
+    const result = tap(ok(42), (v) => captured.push(v));
+    expect(result).toEqual({ ok: true, value: 42 });
+    expect(captured).toEqual([42]);
+  });
+
+  test('does not call function for err result', () => {
+    const captured: number[] = [];
+    const result = tap(err('oops'), (v: number) => captured.push(v));
+    expect(result).toEqual({ ok: false, error: 'oops' });
+    expect(captured).toEqual([]);
   });
 });
 

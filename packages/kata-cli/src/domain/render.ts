@@ -43,7 +43,8 @@ export const renderTitle = define<readonly string[], TitleInput, RenderError>(
     post: [
       check(
         'rendering a title always appends new lines',
-        (before, after) => after.length > before.length
+        (before, after) =>
+          after.length > before.length || 'no lines were appended'
       ),
     ],
   }
@@ -90,7 +91,8 @@ export const renderToc = define<readonly string[], TocInput, RenderError>(
     post: [
       check(
         'rendering TOC appends lines to the existing output',
-        (before, after) => after.length > before.length
+        (before, after) =>
+          after.length > before.length || 'no lines were appended'
       ),
     ],
   }
@@ -120,7 +122,8 @@ export const renderScenarios = define<
   post: [
     check(
       'rendering scenario section appends lines to the existing output',
-      (before, after) => after.length > before.length
+      (before, after) =>
+        after.length > before.length || 'no lines were appended'
     ),
   ],
 });
@@ -186,19 +189,15 @@ export function renderCoverageSection(
 // === render.markdown scenario ===
 
 /** @accepts タイトル・シナリオ・目次をMarkdownとして組み立てられる */
-export const renderMarkdownScenario = scenario<
-  readonly string[],
-  MarkdownInput
->('render.markdown', {
-  flow: (input) => {
-    const steps = [];
-
-    steps.push(
+export const renderMarkdownScenario = scenario(
+  'render.markdown',
+  (input: MarkdownInput) => {
+    const steps = [
       step(renderTitle, {
         title: input.title,
         description: input.description,
-      })
-    );
+      }),
+    ];
 
     if (input.scenarios.length > 0) {
       steps.push(
@@ -223,5 +222,5 @@ export const renderMarkdownScenario = scenario<
     }
 
     return steps;
-  },
-});
+  }
+);

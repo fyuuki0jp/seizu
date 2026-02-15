@@ -34,6 +34,9 @@ export function assertContractValid<TState, TInput, TError>(
     const messages = failures.map((f) => {
       const violationLabel = f.violation ?? 'unknown violation';
       const details: string[] = [];
+      if (f.reason !== undefined) {
+        details.push(`reason: ${f.reason}`);
+      }
       if (f.seed !== undefined) {
         details.push(`seed: ${f.seed}`);
       }

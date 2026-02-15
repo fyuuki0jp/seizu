@@ -161,7 +161,7 @@ describe('registerDocCommand', () => {
     });
     getMessagesMock.mockReturnValue({ locale: 'ja' });
     resolveGlobsMock.mockReturnValue([]);
-    renderMarkdownMock.mockReturnValue('# generated');
+    renderMarkdownMock.mockReturnValue({ ok: true, value: '# generated' });
 
     const { action } = createCliHarness();
 
@@ -273,7 +273,7 @@ describe('registerDocCommand', () => {
     });
     getMessagesMock.mockReturnValue({ locale: 'en' });
     resolveGlobsMock.mockReturnValue([]);
-    renderMarkdownMock.mockReturnValue('# current');
+    renderMarkdownMock.mockReturnValue({ ok: true, value: '# current' });
 
     const { action } = createCliHarness();
 
