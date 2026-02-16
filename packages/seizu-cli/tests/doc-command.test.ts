@@ -63,6 +63,7 @@ vi.mock('../src/doc/parser/source-discovery', () => ({
 vi.mock('../src/doc/parser/source-resolver', () => ({
   createProgramFromFiles: createProgramFromFilesMock,
   resolveGlobs: resolveGlobsMock,
+  isExcluded: () => false,
 }));
 
 vi.mock('../src/doc/renderer/markdown', () => ({

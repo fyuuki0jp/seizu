@@ -15,6 +15,7 @@ export default {
     'tests/domain/render.test.ts',
     'tests/domain/report.test.ts',
   ],
+  exclude: ['tests/fixtures/**'],
   output: 'docs/contracts.md',
   locale: 'en',
   coverage: true,

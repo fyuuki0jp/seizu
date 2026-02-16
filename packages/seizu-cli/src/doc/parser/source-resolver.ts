@@ -1,5 +1,5 @@
 import { readdirSync, statSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import ts from 'typescript';
 
 export function createProgramFromFiles(
@@ -107,6 +107,27 @@ function collectFiles(
       }
     }
   }
+}
+
+export function isExcluded(
+  filePath: string,
+  excludePatterns: readonly string[],
+  basePath: string
+): boolean {
+  if (excludePatterns.length === 0) return false;
+  const rel = relative(basePath, filePath).replace(/\\/g, '/');
+  return excludePatterns.some((pattern) => matchGlob(rel, pattern));
+}
+
+function matchGlob(relativePath: string, pattern: string): boolean {
+  const normalized = pattern.replace(/\\/g, '/');
+  const regexStr = normalized
+    .split('**')
+    .map((segment) =>
+      segment.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*')
+    )
+    .join('.*');
+  return new RegExp(`^${regexStr}$`).test(relativePath);
 }
 
 function globPartToRegex(part: string): RegExp {

@@ -2,6 +2,7 @@ import { resolve } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import {
   createProgramFromFiles,
+  isExcluded,
   resolveGlobs,
 } from '../src/doc/parser/source-resolver';
 
@@ -74,6 +75,64 @@ describe('createProgramFromFiles', () => {
     const tsconfigPath = resolve(__dirname, '..', 'tsconfig.json');
     const program = createProgramFromFiles([contractPath], tsconfigPath);
     expect(program.getSourceFile(contractPath)).toBeDefined();
+  });
+});
+
+describe('isExcluded', () => {
+  const basePath = '/project';
+
+  test('returns false when exclude patterns is empty', () => {
+    expect(isExcluded('/project/src/index.ts', [], basePath)).toBe(false);
+  });
+
+  test('matches ** recursive wildcard', () => {
+    expect(
+      isExcluded(
+        '/project/tests/fixtures/cart-contracts.ts',
+        ['tests/fixtures/**'],
+        basePath
+      )
+    ).toBe(true);
+  });
+
+  test('matches * file wildcard', () => {
+    expect(
+      isExcluded(
+        '/project/tests/fixtures/cart-contracts.ts',
+        ['tests/fixtures/*.ts'],
+        basePath
+      )
+    ).toBe(true);
+  });
+
+  test('does not match unrelated paths', () => {
+    expect(
+      isExcluded(
+        '/project/src/domain/pipeline.ts',
+        ['tests/fixtures/**'],
+        basePath
+      )
+    ).toBe(false);
+  });
+
+  test('matches exact relative path', () => {
+    expect(
+      isExcluded(
+        '/project/tests/fixtures/cart-contracts.ts',
+        ['tests/fixtures/cart-contracts.ts'],
+        basePath
+      )
+    ).toBe(true);
+  });
+
+  test('does not match partial directory name', () => {
+    expect(
+      isExcluded(
+        '/project/tests/fixtures-extra/file.ts',
+        ['tests/fixtures/**'],
+        basePath
+      )
+    ).toBe(false);
   });
 });
 

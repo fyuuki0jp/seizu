@@ -9,6 +9,7 @@ import type { Locale } from '../doc/i18n/types';
 import { discoverSourceFiles } from '../doc/parser/source-discovery';
 import {
   createProgramFromFiles,
+  isExcluded,
   resolveGlobs,
 } from '../doc/parser/source-resolver';
 import { renderMarkdown } from '../doc/renderer/markdown';
@@ -91,21 +92,26 @@ export function registerDocCommand(cli: CAC): void {
               contractFiles: [],
               scenarioFiles: [],
             };
+        const excludePatterns = effectiveConfig.exclude ?? [];
+        const notExcluded = (f: string) =>
+          !isExcluded(f, excludePatterns, basePath);
         const contractFiles = [
           ...(useConfigGlobs
             ? resolveGlobs(effectiveConfig.contracts, basePath)
             : []),
           ...discovered.contractFiles,
-        ];
+        ].filter(notExcluded);
         const scenarioFiles = [
           ...(useConfigGlobs && effectiveConfig.scenarios
             ? resolveGlobs(effectiveConfig.scenarios, basePath)
             : []),
           ...discovered.scenarioFiles,
-        ];
-        const testFiles = effectiveConfig.tests
-          ? resolveGlobs(effectiveConfig.tests, basePath)
-          : [];
+        ].filter(notExcluded);
+        const testFiles = (
+          effectiveConfig.tests
+            ? resolveGlobs(effectiveConfig.tests, basePath)
+            : []
+        ).filter(notExcluded);
 
         const allFiles = [
           ...new Set([...contractFiles, ...scenarioFiles, ...testFiles]),

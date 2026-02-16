@@ -134,6 +134,7 @@ export interface SeizuDocConfig {
   readonly scenarios?: readonly string[];
   readonly tests?: readonly string[];
   readonly entrypoints?: readonly string[];
+  readonly exclude?: readonly string[];
   readonly output?: string;
   readonly tsconfig?: string;
   readonly locale?: Locale;
