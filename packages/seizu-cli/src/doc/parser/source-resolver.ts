@@ -120,14 +120,50 @@ export function isExcluded(
 }
 
 function matchGlob(relativePath: string, pattern: string): boolean {
-  const normalized = pattern.replace(/\\/g, '/');
-  const regexStr = normalized
-    .split('**')
-    .map((segment) =>
-      segment.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*')
-    )
-    .join('.*');
-  return new RegExp(`^${regexStr}$`).test(relativePath);
+  const normalizedPattern = pattern.replace(/\\/g, '/');
+  const patternSegments = normalizedPattern.split('/');
+  const pathSegments = relativePath.split('/');
+
+  function matchSegments(patIdx: number, pathIdx: number): boolean {
+    if (patIdx === patternSegments.length) {
+      return pathIdx === pathSegments.length;
+    }
+
+    const part = patternSegments[patIdx];
+
+    if (part === '**') {
+      if (matchSegments(patIdx + 1, pathIdx)) {
+        return true;
+      }
+      for (let i = pathIdx; i < pathSegments.length; i++) {
+        if (matchSegments(patIdx + 1, i + 1)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    if (pathIdx >= pathSegments.length) {
+      return false;
+    }
+
+    const segment = pathSegments[pathIdx];
+
+    if (part.includes('*')) {
+      const regex = globPartToRegex(part);
+      if (!regex.test(segment)) {
+        return false;
+      }
+    } else {
+      if (part !== segment) {
+        return false;
+      }
+    }
+
+    return matchSegments(patIdx + 1, pathIdx + 1);
+  }
+
+  return matchSegments(0, 0);
 }
 
 function globPartToRegex(part: string): RegExp {

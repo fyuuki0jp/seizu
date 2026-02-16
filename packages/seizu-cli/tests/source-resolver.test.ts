@@ -134,6 +134,26 @@ describe('isExcluded', () => {
       )
     ).toBe(false);
   });
+
+  test('** matches zero intermediate directories', () => {
+    expect(
+      isExcluded(
+        '/project/tests/fixtures/cart-contracts.ts',
+        ['tests/**/cart-contracts.ts'],
+        basePath
+      )
+    ).toBe(true);
+  });
+
+  test('** matches multiple intermediate directories', () => {
+    expect(
+      isExcluded(
+        '/project/tests/fixtures/deep/nested/file.ts',
+        ['tests/**/file.ts'],
+        basePath
+      )
+    ).toBe(true);
+  });
 });
 
 describe('resolveGlobs edge cases', () => {

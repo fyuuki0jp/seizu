@@ -7,6 +7,7 @@ const {
   getMessagesMock,
   resolveGlobsMock,
   createProgramFromFilesMock,
+  isExcludedMock,
   formatCoverageReportMock,
   coverageGenerateMock,
 } = vi.hoisted(() => {
@@ -23,6 +24,7 @@ const {
     getMessagesMock: vi.fn(),
     resolveGlobsMock: vi.fn(),
     createProgramFromFilesMock: vi.fn(),
+    isExcludedMock: vi.fn(() => false),
     formatCoverageReportMock: vi.fn(),
     coverageGenerateMock: vi.fn(),
   };
@@ -49,7 +51,7 @@ vi.mock('../src/doc/i18n/index', () => ({
 vi.mock('../src/doc/parser/source-resolver', () => ({
   createProgramFromFiles: createProgramFromFilesMock,
   resolveGlobs: resolveGlobsMock,
-  isExcluded: () => false,
+  isExcluded: isExcludedMock,
 }));
 
 vi.mock('../src/coverage/reporters/terminal', () => ({
@@ -245,6 +247,43 @@ describe('registerCoverageCommand', () => {
     await expect(action([], makeOptions())).rejects.toMatchObject({ code: 2 });
     expect(console.error).toHaveBeenCalledWith(
       'Configuration error: bad config'
+    );
+  });
+
+  test('filters excluded files from resolved sources', async () => {
+    loadConfigMock.mockResolvedValue({
+      config: {
+        ...makeConfig(),
+        exclude: ['tests/fixtures/**'],
+      },
+    });
+    getMessagesMock.mockReturnValue({ locale: 'en' });
+    resolveGlobsMock
+      .mockReturnValueOnce([
+        '/workspace/contracts/order.ts',
+        '/workspace/tests/fixtures/cart-contracts.ts',
+      ])
+      .mockReturnValueOnce(['/workspace/tests/order.test.ts']);
+    isExcludedMock.mockImplementation((filePath: string) =>
+      filePath.includes('tests/fixtures/')
+    );
+    createProgramFromFilesMock.mockReturnValue({
+      getSourceFile: vi.fn(() => ({}) as object),
+    });
+    coverageGenerateMock.mockReturnValue({
+      ok: true,
+      value: { coverageReport: { summary: { testedContracts: 1 } } },
+    });
+    formatCoverageReportMock.mockReturnValue('coverage output');
+
+    const action = createCliHarness();
+
+    await expect(action([], makeOptions())).rejects.toMatchObject({ code: 0 });
+
+    expect(isExcludedMock).toHaveBeenCalled();
+    expect(createProgramFromFilesMock).toHaveBeenCalledWith(
+      ['/workspace/contracts/order.ts', '/workspace/tests/order.test.ts'],
+      undefined
     );
   });
 });
