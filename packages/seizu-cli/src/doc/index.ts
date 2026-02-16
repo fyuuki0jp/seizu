@@ -3,7 +3,11 @@ import { isOk } from 'seizu';
 import { docGenerate } from '../domain/pipeline';
 import type { DocPipelineState, SourceFileEntry } from '../domain/types';
 import { getMessages } from './i18n/index';
-import { createProgramFromFiles, resolveGlobs } from './parser/source-resolver';
+import {
+  createProgramFromFiles,
+  isExcluded,
+  resolveGlobs,
+} from './parser/source-resolver';
 import { renderMarkdown } from './renderer/markdown';
 import type { SeizuDocConfig } from './types';
 import { validateContracts } from './validator';
@@ -50,11 +54,17 @@ export function generate(
   const basePath = process.cwd();
   const messages = getMessages(config.locale ?? 'en');
 
-  const contractFiles = resolveGlobs(config.contracts, basePath);
+  const excludePatterns = config.exclude ?? [];
+  const notExcluded = (f: string) => !isExcluded(f, excludePatterns, basePath);
+  const contractFiles = resolveGlobs(config.contracts, basePath).filter(
+    notExcluded
+  );
   const scenarioFiles = config.scenarios
-    ? resolveGlobs(config.scenarios, basePath)
+    ? resolveGlobs(config.scenarios, basePath).filter(notExcluded)
     : [];
-  const testFiles = config.tests ? resolveGlobs(config.tests, basePath) : [];
+  const testFiles = config.tests
+    ? resolveGlobs(config.tests, basePath).filter(notExcluded)
+    : [];
 
   const allFiles = [...contractFiles, ...scenarioFiles, ...testFiles];
   const flowEnabled = config.flow ?? true;

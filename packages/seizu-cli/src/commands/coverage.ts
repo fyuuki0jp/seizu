@@ -7,6 +7,7 @@ import { getMessages } from '../doc/i18n/index';
 import type { Locale } from '../doc/i18n/types';
 import {
   createProgramFromFiles,
+  isExcluded,
   resolveGlobs,
 } from '../doc/parser/source-resolver';
 import { coverageGenerate } from '../domain/pipeline';
@@ -27,10 +28,15 @@ export function registerCoverageCommand(cli: CAC): void {
         const messages = getMessages(locale);
         const basePath = process.cwd();
 
-        const contractFiles = resolveGlobs(config.contracts, basePath);
-        const testFiles = config.tests
-          ? resolveGlobs(config.tests, basePath)
-          : [];
+        const excludePatterns = config.exclude ?? [];
+        const notExcluded = (f: string) =>
+          !isExcluded(f, excludePatterns, basePath);
+        const contractFiles = resolveGlobs(config.contracts, basePath).filter(
+          notExcluded
+        );
+        const testFiles = (
+          config.tests ? resolveGlobs(config.tests, basePath) : []
+        ).filter(notExcluded);
 
         const allFiles = [...contractFiles, ...testFiles];
         if (allFiles.length === 0) {

@@ -1,5 +1,5 @@
 import { readdirSync, statSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import ts from 'typescript';
 
 export function createProgramFromFiles(
@@ -107,6 +107,63 @@ function collectFiles(
       }
     }
   }
+}
+
+export function isExcluded(
+  filePath: string,
+  excludePatterns: readonly string[],
+  basePath: string
+): boolean {
+  if (excludePatterns.length === 0) return false;
+  const rel = relative(basePath, filePath).replace(/\\/g, '/');
+  return excludePatterns.some((pattern) => matchGlob(rel, pattern));
+}
+
+function matchGlob(relativePath: string, pattern: string): boolean {
+  const normalizedPattern = pattern.replace(/\\/g, '/');
+  const patternSegments = normalizedPattern.split('/');
+  const pathSegments = relativePath.split('/');
+
+  function matchSegments(patIdx: number, pathIdx: number): boolean {
+    if (patIdx === patternSegments.length) {
+      return pathIdx === pathSegments.length;
+    }
+
+    const part = patternSegments[patIdx];
+
+    if (part === '**') {
+      if (matchSegments(patIdx + 1, pathIdx)) {
+        return true;
+      }
+      for (let i = pathIdx; i < pathSegments.length; i++) {
+        if (matchSegments(patIdx + 1, i + 1)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    if (pathIdx >= pathSegments.length) {
+      return false;
+    }
+
+    const segment = pathSegments[pathIdx];
+
+    if (part.includes('*')) {
+      const regex = globPartToRegex(part);
+      if (!regex.test(segment)) {
+        return false;
+      }
+    } else {
+      if (part !== segment) {
+        return false;
+      }
+    }
+
+    return matchSegments(patIdx + 1, pathIdx + 1);
+  }
+
+  return matchSegments(0, 0);
 }
 
 function globPartToRegex(part: string): RegExp {

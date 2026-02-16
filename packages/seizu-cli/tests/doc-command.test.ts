@@ -8,6 +8,7 @@ const {
   discoverSourceFilesMock,
   resolveGlobsMock,
   createProgramFromFilesMock,
+  isExcludedMock,
   renderMarkdownMock,
   docGenerateMock,
   existsSyncMock,
@@ -29,6 +30,7 @@ const {
     discoverSourceFilesMock: vi.fn(),
     resolveGlobsMock: vi.fn(),
     createProgramFromFilesMock: vi.fn(),
+    isExcludedMock: vi.fn(() => false),
     renderMarkdownMock: vi.fn(),
     docGenerateMock: vi.fn(),
     existsSyncMock: vi.fn(),
@@ -63,6 +65,7 @@ vi.mock('../src/doc/parser/source-discovery', () => ({
 vi.mock('../src/doc/parser/source-resolver', () => ({
   createProgramFromFiles: createProgramFromFilesMock,
   resolveGlobs: resolveGlobsMock,
+  isExcluded: isExcludedMock,
 }));
 
 vi.mock('../src/doc/renderer/markdown', () => ({
@@ -574,6 +577,45 @@ describe('registerDocCommand', () => {
     await expect(action([], makeOptions())).rejects.toMatchObject({ code: 2 });
     expect(console.error).toHaveBeenCalledWith(
       'Configuration error: invalid config'
+    );
+  });
+
+  test('filters excluded files from resolved sources', async () => {
+    loadConfigMock.mockResolvedValue({
+      config: {
+        title: 'Doc',
+        contracts: ['src/**/*.ts'],
+        exclude: ['tests/fixtures/**'],
+        verify: { contracts: [] },
+      },
+    });
+    getMessagesMock.mockReturnValue({ locale: 'en' });
+    resolveGlobsMock.mockReturnValueOnce([
+      '/workspace/src/contract.ts',
+      '/workspace/tests/fixtures/cart-contracts.ts',
+    ]);
+    resolveGlobsMock.mockReturnValue([]);
+    isExcludedMock.mockImplementation((filePath: string) =>
+      filePath.includes('tests/fixtures/')
+    );
+    createProgramFromFilesMock.mockReturnValue({
+      getSourceFile: vi.fn(() => ({}) as object),
+    });
+    docGenerateMock.mockReturnValue({
+      ok: true,
+      value: { markdown: '# filtered', linked: [], linkedScenarios: [] },
+    });
+
+    const { action } = createCliHarness();
+
+    await expect(
+      action([], makeOptions({ stdout: true }))
+    ).rejects.toMatchObject({ code: 0 });
+
+    expect(isExcludedMock).toHaveBeenCalled();
+    expect(createProgramFromFilesMock).toHaveBeenCalledWith(
+      ['/workspace/src/contract.ts'],
+      undefined
     );
   });
 });
